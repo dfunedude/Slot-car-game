@@ -38,6 +38,6 @@ Run the build in debug mode and drive the game through `window.__bgp` (`session`
 ## Publishing
 
 1. `npm test && npm run build`
-2. Publish `dist/basement-grand-prix.html` to the existing artifact. Find it with the Artifact tool's `list` (title "Basement Grand Prix"), `read` it, then publish with its `url`. Only create a new artifact if the user asks.
+2. Publish `dist/basement-grand-prix.html` to the existing artifact, https://claude.ai/artifact/54ss2cMMZ7uhXkUuQoZQeL (title "Basement Grand Prix"): `read` it, then publish with its `url`. Only create a new artifact if the user asks.
 3. Keep the localStorage key (`basement-grand-prix-v1` in `src/storage.js`) and the save format compatible.
 4. Whenever you publish an update to the artifact, also commit the change and push it to GitHub, without asking first: the user wants every new build pushed to the repository.
