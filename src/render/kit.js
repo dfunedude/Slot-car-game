@@ -1,0 +1,205 @@
+// ===== render/kit: unit shapes, and helpers that merge many parts into a few meshes =====
+import * as THREE from 'three';
+import { PI } from '../core/geometry.js';
+
+export const UNIT = {
+  box: new THREE.BoxGeometry(1, 1, 1),
+  cylY: new THREE.CylinderGeometry(1, 1, 1, 20),
+  cylX: new THREE.CylinderGeometry(1, 1, 1, 24).rotateZ(PI / 2),
+  cylZ: new THREE.CylinderGeometry(1, 1, 1, 20).rotateX(PI / 2),
+  cylZ32: new THREE.CylinderGeometry(1, 1, 1, 32).rotateX(PI / 2),
+  sphere: new THREE.SphereGeometry(1, 20, 12),
+  cone: new THREE.ConeGeometry(1, 1, 14),
+};
+const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _eu = new THREE.Euler(), _p3 = new THREE.Vector3(), _s3 = new THREE.Vector3();
+
+// Merge many geometries into one. A material can ask for its UVs to be projected: planar from the
+// side ({ x0, x1, y0, y1 }), or box, which picks for each triangle the view it faces (top, right side,
+// left side, or the nose and tail ends) and maps it into that quarter of a livery atlas (liveryMat).
+export function mergeList(list, proj = {}) {
+  let n = 0;
+  const parts = list.map(g => { const ng = g.index ? g.toNonIndexed() : g; n += ng.attributes.position.count; return ng; });
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+  let o = 0;
+  for (const g of parts) {
+    const P = g.attributes.position, N = g.attributes.normal, U = g.attributes.uv;
+    pos.set(P.array, o * 3);
+    if (N) nor.set(N.array, o * 3);
+    if (U && !proj.planar && !proj.box) uv.set(U.array, o * 2);
+    o += P.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  if (proj.planar) {
+    const b = proj.planar;
+    for (let i = 0; i < n; i++) { uv[i * 2] = (pos[i * 3] - b.x0) / (b.x1 - b.x0); uv[i * 2 + 1] = (pos[i * 3 + 1] - b.y0) / (b.y1 - b.y0); }
+  } else if (proj.box) boxUV(pos, uv, n, proj.box);
+  out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  out.computeBoundingSphere();
+  return out;
+}
+function boxUV(pos, uv, n, b) {
+  const W = b.x1 - b.x0, H = b.y1 - b.y0, D = b.z1 - b.z0;
+  for (let t = 0; t + 2 < n; t += 3) {
+    const i = t * 3;
+    const ax = pos[i + 3] - pos[i], ay = pos[i + 4] - pos[i + 1], az = pos[i + 5] - pos[i + 2];
+    const bx = pos[i + 6] - pos[i], by = pos[i + 7] - pos[i + 1], bz = pos[i + 8] - pos[i + 2];
+    const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+    const cz = (pos[i + 2] + pos[i + 5] + pos[i + 8]) / 3;
+    const mx = Math.abs(nx), my = Math.abs(ny), mz = Math.abs(nz);
+    const top = my > 0.8 * Math.max(mx, mz);
+    const end = !top && mx > 1.3 * mz;
+    const right = mz > mx ? nz >= 0 : cz >= 0;
+    for (let k = 0; k < 3; k++) {
+      const x = pos[i + k * 3], y = pos[i + k * 3 + 1], z = pos[i + k * 3 + 2];
+      let px, py;
+      if (top) { px = (x - b.x0) / W; py = (z - b.z0) / D / 4; }
+      else if (end) { px = (z - b.z0) / D; py = (3 + (b.y1 - y) / H) / 4; }
+      else if (right) { px = (x - b.x0) / W; py = (1 + (b.y1 - y) / H) / 4; }
+      else { px = (b.x1 - x) / W; py = (2 + (b.y1 - y) / H) / 4; }
+      uv[(t + k) * 2] = px; uv[(t + k) * 2 + 1] = 1 - Math.min(0.999, Math.max(0.001, py));
+    }
+  }
+}
+// A kit collects parts per material and merges them into a few meshes: every mesh is a draw call
+// (two with its shadow), so a model costs one per material however many parts it has.
+export class Kit {
+  constructor() { this.buckets = new Map(); }
+  put(mat, geo, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+    _eu.set(rx, ry, rz); _q.setFromEuler(_eu);
+    _m4.compose(_p3.set(x, y, z), _q, _s3.set(sx, sy, sz));
+    const g = (geo.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(_m4);
+    if (!this.buckets.has(mat)) this.buckets.set(mat, []);
+    this.buckets.get(mat).push(g);
+    return this;
+  }
+  // everything in another kit, moved to (x, y, z) and turned ry about the vertical
+  add(kit, x = 0, y = 0, z = 0, ry = 0) {
+    for (const [mat, list] of kit.buckets) for (const g of list) this.put(mat, g, x, y, z, 0, ry, 0);
+    return this;
+  }
+  box(mat, lx, ly, lz, x, y, z, rx = 0, ry = 0, rz = 0) { return this.put(mat, UNIT.box, x, y, z, rx, ry, rz, lx, ly, lz); }
+  // y-range box: easier to read for bodies that sit on a deck
+  boxY(mat, x0, x1, y0, y1, hw, z = 0) { return this.box(mat, x1 - x0, y1 - y0, hw * 2, (x0 + x1) / 2, (y0 + y1) / 2, z); }
+  cylX(mat, r, len, x, y, z, ry = r, rz = r) { return this.put(mat, UNIT.cylX, x, y, z, 0, 0, 0, len, ry, rz); }
+  cylY(mat, r, h, x, y, z, rz = r) { return this.put(mat, UNIT.cylY, x, y, z, 0, 0, 0, r, h, rz); }
+  cylZ(mat, r, len, x, y, z) { return this.put(mat, UNIT.cylZ, x, y, z, 0, 0, 0, r, r, len); }
+  sphere(mat, rx, ry, rz, x, y, z) { return this.put(mat, UNIT.sphere, x, y, z, 0, 0, 0, rx, ry, rz); }
+  // one merged geometry per material, for callers that draw them their own way (world/track instances them)
+  parts() { return [...this.buckets].map(([mat, list]) => ({ mat, geo: mergeList(list, mat.userData) })); }
+  build() {
+    const group = new THREE.Group();
+    for (const { mat, geo } of this.parts()) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = castsShadow(mat); mesh.receiveShadow = true;
+      if (mat.map) mesh.customDepthMaterial = mappedDepth;
+      mesh.userData.owned = true;
+      group.add(mesh);
+    }
+    return group;
+  }
+}
+// three's shadow pass draws casters with one shared depth material and copies each one's texture onto
+// it, so which of its shaders it needs can turn on the order things are drawn in, and a new one could
+// compile in the middle of a run. Casters with a texture use this one instead, so each depth shader
+// always belongs to the same material and both are built in the first frame (the room has both kinds).
+const mappedDepth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+// Lamps, lit windows and glass sit on the surface of a model, inside the shadow of its body, so
+// drawing them into the shadow map as well would cost a draw call and change nothing.
+export const castsShadow = mat => !mat.userData.surface;
+
+// Release the geometry a Kit merged for a model (its materials are shared and stay).
+export function disposeModel(obj) {
+  obj.traverse(o => { if (o.isMesh && o.userData.owned) o.geometry.dispose(); });
+}
+// A box standing between two points (a sawhorse leg, a stair stringer): w across, d deep.
+export function beam(k, mat, a, b, w, d, twist = 0) {
+  _p3.set(b.x - a.x, b.y - a.y, b.z - a.z);
+  const len = _p3.length();
+  _q.setFromUnitVectors(_UP, _p3.normalize());
+  if (twist) _q.multiply(new THREE.Quaternion().setFromAxisAngle(_UP, twist));
+  _eu.setFromQuaternion(_q);
+  return k.put(mat, UNIT.box, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2, _eu.x, _eu.y, _eu.z, w, len, d);
+}
+const _UP = new THREE.Vector3(0, 1, 0);
+// Fix the transforms of a model that never moves, so the renderer stops recomputing them every frame.
+// To move it later, change it and call updateMatrix() on what moved.
+export function pin(obj) {
+  obj.traverse(o => { o.updateMatrix(); o.matrixAutoUpdate = false; });
+}
+
+// Sweep a closed 2D profile [(lateral, y)] along samples [{x, z, h}]. Lateral is to the right of travel.
+export function sweepGeo(profile, samples, closed = true) {
+  const P = profile.length, S = samples.length;
+  const pos = [], uv = [], idx = [];
+  samples.forEach((s, i) => {
+    const nx = -Math.sin(s.h), nz = Math.cos(s.h);
+    profile.forEach(([lat, y], j) => { pos.push(s.x + nx * lat, y, s.z + nz * lat); uv.push(i / (S - 1), j / P); });
+  });
+  const J = closed ? P : P - 1;
+  for (let i = 0; i < S - 1; i++) for (let j = 0; j < J; j++) {
+    const a = i * P + j, b = (i + 1) * P + j, c = (i + 1) * P + (j + 1) % P, d = i * P + (j + 1) % P;
+    idx.push(a, b, d, b, c, d);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+export function routeSamples(route, step = 0.6) {
+  const n = route.kind === 'arc' ? Math.max(4, Math.ceil(route.len / step)) : 1;
+  const out = [];
+  for (let i = 0; i <= n; i++) out.push(route.at(route.len * i / n));
+  return out;
+}
+
+export function xf(geo, x, y, z, sx = 1, sy = 1, sz = 1) {
+  _m4.compose(_p3.set(x, y, z), _q.identity(), _s3.set(sx, sy, sz));
+  return (geo.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(_m4);
+}
+export function prismX(pts, zHalf) {
+  const s = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+  return new THREE.ExtrudeGeometry(s, { depth: zHalf * 2, bevelEnabled: false }).translate(0, 0, -zHalf);
+}
+
+// Rounded-rectangle cross sections (half-width w, bottom y0, top y1, corner radius r) for loftGeo.
+function ringPts(w, y0, y1, r) {
+  const pts = [], K = 6;
+  for (let i = 0; i < 4; i++) pts.push([w, y0 + (y1 - r - y0) * i / 4]);
+  for (let i = 0; i <= K; i++) { const a = i / K * PI / 2; pts.push([w - r + r * Math.cos(a), y1 - r + r * Math.sin(a)]); }
+  for (let i = 1; i < 6; i++) pts.push([(w - r) - 2 * (w - r) * i / 6, y1]);
+  for (let i = 0; i <= K; i++) { const a = PI / 2 + i / K * PI / 2; pts.push([-w + r + r * Math.cos(a), y1 - r + r * Math.sin(a)]); }
+  for (let i = 1; i <= 4; i++) pts.push([-w, (y1 - r) - (y1 - r - y0) * i / 4]);
+  for (let i = 1; i < 4; i++) pts.push([-w + 2 * w * i / 4, y0]);
+  return pts;
+}
+// Skin a body through cross sections along x, e.g. a cab nose; closed at both ends.
+export function loftGeo(sections) {
+  const rings = sections.map(s => ringPts(s.w, s.y0, s.y1, s.r));
+  const N = rings[0].length, pos = [], idx = [];
+  sections.forEach((s, i) => rings[i].forEach(([z, y]) => pos.push(s.x, y, z)));
+  for (let i = 0; i < sections.length - 1; i++) for (let j = 0; j < N; j++) {
+    const a = i * N + j, b = (i + 1) * N + j, c = (i + 1) * N + (j + 1) % N, d = i * N + (j + 1) % N;
+    idx.push(a, b, d, b, c, d);
+  }
+  const shell = new THREE.BufferGeometry();
+  shell.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  shell.setIndex(idx);
+  shell.computeVertexNormals();
+  const parts = [shell];
+  for (const [i, flip] of [[0, false], [sections.length - 1, true]]) {
+    const ring = rings[i], x = sections[i].x, cy = (sections[i].y0 + sections[i].y1) / 2, p = [];
+    for (let j = 0; j < N; j++) {
+      const A = ring[j], B = ring[(j + 1) % N];
+      if (flip) p.push(x, cy, 0, x, B[1], B[0], x, A[1], A[0]); else p.push(x, cy, 0, x, A[1], A[0], x, B[1], B[0]);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+    g.computeVertexNormals();
+    parts.push(g);
+  }
+  return mergeList(parts);
+}

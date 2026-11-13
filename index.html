@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Basement Grand Prix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Racing+Sans+One&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="src/styles/base.css">
+<link rel="stylesheet" href="src/styles/stage.css">
+<link rel="stylesheet" href="src/styles/deck.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="view" aria-label="Slot car track on a table in a basement. Drag to look around, pinch or scroll to zoom."></canvas>
+    <header class="brand">
+      <span class="brand-mark">BASEMENT GRAND PRIX</span>
+      <span class="brand-sub">HO slot racing · 4 × 8 ft table</span>
+    </header>
+    <div class="hud-tools">
+      <button id="btnSound" class="icon-btn" aria-pressed="true" aria-label="Sound on" title="Sound">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="mute" d="M17 9l5 6M22 9l-5 6" style="display:none"/></svg>
+      </button>
+      <button id="btnFast" class="icon-btn" aria-pressed="false" aria-label="Fast graphics off" title="Fast graphics (G)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17a8.5 8.5 0 1 1 17 0"/><path d="M12 17l4.5-5.5"/><path d="M6.5 11.5l1 .8M12 7.8v1.2M17.5 11.5l-1 .8"/></svg>
+      </button>
+      <button id="btnFollow" class="icon-btn" aria-pressed="false" aria-label="Follow your car" title="Follow your car (F)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="13" height="10" rx="2"/><path d="M15.5 10.5l6-3.5v10l-6-3.5"/></svg>
+      </button>
+      <button id="btnView" class="icon-btn" aria-label="Reset view" title="Table view (V)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+      </button>
+      <button id="btnHelp" class="icon-btn" aria-label="How to play" title="How to play">?</button>
+    </div>
+    <div id="board" class="board" aria-live="off">
+      <div class="lane-row" data-lane="0"><span class="chip-dot red"></span><span class="who"></span><span class="laps"></span><span class="t last"></span><span class="t best"></span></div>
+      <div class="lane-row" data-lane="1"><span class="chip-dot blue"></span><span class="who"></span><span class="laps"></span><span class="t last"></span><span class="t best"></span></div>
+    </div>
+    <div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+    <div id="help" class="help" hidden>
+      <div class="help-card" role="dialog" aria-labelledby="helpTitle">
+        <h2 id="helpTitle">Racing in the basement</h2>
+        <p class="lede">Mouse, trackpad and touch all work the same way.</p>
+        <dl>
+          <dt>Drive</dt><dd>Hold the trigger strip on your controller and slide along it to squeeze harder. Let go and the controller brakes. Keys: Space or ↑ for the first player, W for the second.</dd>
+          <dt>Corners</dt><dd>The corner meter shows how hard the tyres are working. In the yellow the tail steps out; hold it in the red and the guide pops out of the slot and the car flies off, maybe off the table.</dd>
+          <dt>Reset</dt><dd>A car that has come off waits for you: tap it, press Reset on its controller, or press R, and it's set back in its slot. The computer's marshal looks after its own car.</dd>
+          <dt>Race</dt><dd>Pick practice or a race and press Start. Races wait for three red lights and go on the green. The lane swap and the crossing are where the two cars can meet.</dd>
+          <dt>Track</dt><dd>Tap a piece to add it at the glowing open end, or tap any ring to build from that end. Drag pieces and their ends snap together. Rotate, Delete, Undo and ready-made circuits are on the second row. Laps are counted on the start/finish piece.</dd>
+          <dt>Garage</dt><dd>Choose a lane, then a car and its paint. Each car has its own top speed, pickup and grip.</dd>
+          <dt>View</dt><dd>Drag to look around, pinch or scroll to zoom, two-finger drag or right-drag to pan. The camera button rides along behind your car.</dd>
+        </dl>
+        <div class="close-row"><button id="btnHelpClose" class="key">Close</button></div>
+      </div>
+    </div>
+  </div>
+
+  <nav id="deck" aria-label="Controls">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-race" data-tab="race" aria-selected="true">Race</button>
+      <button class="tab" role="tab" id="tab-track" data-tab="track" aria-selected="false">Track</button>
+      <button class="tab" role="tab" id="tab-garage" data-tab="garage" aria-selected="false">Garage</button>
+      <span class="readout" id="readout"></span>
+    </div>
+
+    <section class="panel" data-panel="race" role="tabpanel" aria-labelledby="tab-race">
+      <div class="controllers">
+        <div class="ctl" data-lane="0">
+          <div class="ctl-head">
+            <span class="chip-dot red"></span>
+            <select class="driver key slim" aria-label="Red lane driver"></select>
+            <button class="reset key slim" aria-label="Put the red car back">Reset</button>
+          </div>
+          <div class="trigger" role="slider" tabindex="0" aria-label="Red trigger" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="fill"></span><span class="plunger"></span><span class="lbl">Hold to go</span>
+          </div>
+          <div class="meter" aria-hidden="true"><span class="needle"></span></div>
+        </div>
+        <div class="ctl" data-lane="1">
+          <div class="ctl-head">
+            <span class="chip-dot blue"></span>
+            <select class="driver key slim" aria-label="Blue lane driver"></select>
+            <button class="reset key slim" aria-label="Put the blue car back">Reset</button>
+          </div>
+          <div class="trigger" role="slider" tabindex="0" aria-label="Blue trigger" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="fill"></span><span class="plunger"></span><span class="lbl">Hold to go</span>
+          </div>
+          <div class="meter" aria-hidden="true"><span class="needle"></span></div>
+        </div>
+      </div>
+      <div class="row scroller">
+        <select id="modeSel" class="key" aria-label="Session"></select>
+        <button id="btnStart" class="key go">Start</button>
+        <select id="skillSel" class="key" aria-label="Computer driver"></select>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="track" role="tabpanel" aria-labelledby="tab-track" hidden>
+      <div class="row scroller" id="palette" role="toolbar" aria-label="Track pieces"></div>
+      <div class="row scroller">
+        <button id="btnRotate" class="key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>Rotate</button>
+        <button id="btnDelete" class="key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>Delete</button>
+        <button id="btnUndo" class="key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo</button>
+        <select id="presetSel" class="key" aria-label="Load a circuit">
+          <option value="">Circuits…</option>
+        </select>
+        <span class="stat" id="trackStat"></span>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="garage" role="tabpanel" aria-labelledby="tab-garage" hidden>
+      <div class="row scroller" id="carRow" role="toolbar" aria-label="Cars">
+        <div class="seg" role="radiogroup" aria-label="Lane">
+          <button class="seg-btn" data-lane="0" role="radio" aria-checked="true"><span class="chip-dot red"></span>Red</button>
+          <button class="seg-btn" data-lane="1" role="radio" aria-checked="false"><span class="chip-dot blue"></span>Blue</button>
+        </div>
+        <span class="divider" aria-hidden="true"></span>
+        <span id="carSlot" class="slot"></span>
+      </div>
+      <div class="row">
+        <div class="paints scroller" id="paints" aria-label="Paint"></div>
+        <div class="stats" id="stats"></div>
+      </div>
+    </section>
+  </nav>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

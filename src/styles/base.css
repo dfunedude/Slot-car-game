@@ -1,0 +1,39 @@
+/* ===== base: colour tokens, fonts, page layout ===== */
+/* Layout: the 3D basement fills the screen; a control deck in the black plastic and orange of a
+   1970s race set's lap-counter console docks under it. One look on every device. */
+:root {
+  --room: #0c0a09;
+  --deck: #17171a;
+  --deck-raised: #232327;
+  --deck-sunk: #0f0f11;
+  --deck-line: #36363c;
+  --ivory: #eeeae0;
+  --ivory-dim: #9d998f;
+  --accent: #f07c12;
+  --accent-deep: #a85208;
+  --accent-ink: #1c1004;
+  --red: #e0362a;
+  --blue: #3576e8;
+  --go: #3fbf5a;
+  --font-display: "Racing Sans One", "Arial Black", Impact, sans-serif;
+  --font-ui: "Barlow Semi Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --tap: 44px;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html { height: 100%; box-sizing: border-box; background: var(--room); }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  height: 100%; margin: 0; overflow: hidden;
+  background: var(--room); color: var(--ivory);
+  font-family: var(--font-ui); font-size: 15px; line-height: 1.3;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#app { height: 100%; display: flex; flex-direction: column; }
+button { font-family: var(--font-ui); }
+button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 0 2px rgba(0,0,0,.4); }
+.chip-dot.red { background: var(--red); }
+.chip-dot.blue { background: var(--blue); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

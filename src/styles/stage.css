@@ -1,0 +1,100 @@
+/* ===== stage: the 3D view and what floats over it (brand, view buttons, timing board, banner, help) ===== */
+#stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+.brand {
+  position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); top: 10px; pointer-events: none;
+  display: flex; flex-direction: column; gap: 0;
+}
+.brand-mark {
+  font-family: var(--font-display); font-size: 24px; letter-spacing: 0.03em; line-height: 1.1;
+  color: var(--accent); text-shadow: 0 2px 0 rgba(0,0,0,.7);
+}
+.brand-sub { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ivory-dim); }
+.hud-tools { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); top: 10px; display: flex; gap: 8px; }
+.icon-btn {
+  width: var(--tap); height: var(--tap); border-radius: 50%;
+  display: grid; place-items: center; padding: 0;
+  background: color-mix(in srgb, var(--deck) 82%, transparent); color: var(--ivory);
+  border: 1px solid var(--deck-line); cursor: pointer;
+  font: 700 18px/1 var(--font-ui);
+  touch-action: manipulation;
+}
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn[aria-pressed="true"] { color: var(--accent); }
+#btnFollow[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-deep); }
+
+/* the timing board: one row per lane, like the mechanical lap counter on the old sets */
+.board {
+  position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: 12px;
+  display: grid; gap: 4px; pointer-events: none;
+  font: 600 14px/1 var(--font-ui); font-variant-numeric: tabular-nums;
+}
+.lane-row {
+  display: grid; grid-template-columns: 10px minmax(0, 9.5em) 4.6em 4.2em 4.6em; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 6px;
+  background: color-mix(in srgb, var(--deck) 86%, transparent); border: 1px solid var(--deck-line);
+}
+.lane-row .who { color: var(--ivory); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lane-row .laps { color: var(--accent); font-weight: 700; }
+.lane-row .t { color: var(--ivory-dim); text-align: right; }
+.lane-row .t.best { color: var(--ivory); }
+.lane-row.flash { animation: flash .5s; }
+.lane-row.is-off .who::after { content: " · OFF"; color: var(--red); font-weight: 700; }
+@keyframes flash { from { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); } to { border-color: var(--deck-line); box-shadow: none; } }
+
+.banner {
+  position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%);
+  padding: 12px 28px; border-radius: 10px; pointer-events: none; text-align: center;
+  background: color-mix(in srgb, var(--deck) 88%, transparent); border: 1px solid var(--deck-line);
+  font: 400 40px/1.05 var(--font-display); letter-spacing: .03em; color: var(--ivory);
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+}
+.banner small { display: block; margin-top: 6px; font: 600 15px/1.3 var(--font-ui); letter-spacing: .02em; color: var(--ivory-dim); }
+.banner .lights { display: flex; gap: 10px; justify-content: center; margin-bottom: 4px; }
+.banner .lights i { width: 24px; height: 24px; border-radius: 50%; background: #2a1210; border: 2px solid #000; }
+.banner .lights i.on { background: #ff3a22; box-shadow: 0 0 14px #ff3a22; }
+.banner .lights i.go { background: #3fff6a; box-shadow: 0 0 16px #3fff6a; }
+
+#toast {
+  position: absolute; left: 50%; top: 64px; transform: translateX(-50%);
+  max-width: min(92%, 440px); padding: 9px 16px; border-radius: 6px;
+  background: var(--deck); border: 1px solid var(--deck-line); color: var(--ivory);
+  font-size: 14px; text-align: center; pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4);
+}
+.help {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 16px;
+  background: color-mix(in srgb, var(--room) 70%, transparent);
+}
+.help-card {
+  width: min(100%, 540px); max-height: 100%; overflow: auto;
+  background: var(--deck); border: 1px solid var(--deck-line); border-radius: 10px;
+  padding: 18px 20px 16px; box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  -webkit-user-select: text; user-select: text;
+}
+.help-card h2 { margin: 0 0 4px; font: 400 26px/1.1 var(--font-display); color: var(--accent); text-wrap: balance; }
+.help-card p.lede { margin: 0 0 12px; color: var(--ivory-dim); }
+.help-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; }
+.help-card dt { font: 700 13px/1.4 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.help-card dd { margin: 0; }
+.help-card .close-row { display: flex; justify-content: flex-end; margin-top: 14px; }
+
+@media (max-width: 560px) {
+  .brand-sub { display: none; }
+  .brand-mark { font-size: 18px; max-width: 7em; }
+  .lane-row { grid-template-columns: 10px minmax(0, 6em) 3.8em 3.6em 3.8em; gap: 6px; padding: 5px 8px; font-size: 13px; }
+  .banner { font-size: 30px; padding: 10px 20px; }
+}
+@media (max-width: 400px) {
+  .hud-tools { gap: 5px; }
+  .icon-btn { width: 38px; height: 38px; }
+  .brand-mark { font-size: 15px; }
+  .lane-row { grid-template-columns: 10px minmax(0, 4.5em) 3.4em 3.4em 3.6em; gap: 5px; font-size: 12px; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .brand-sub { display: none; }
+  .brand-mark { font-size: 18px; }
+  .board { bottom: 6px; }
+  .lane-row { grid-template-columns: 10px minmax(0, 7em) 3.6em 3.8em; padding: 4px 8px; font-size: 12px; }
+  .lane-row .last { display: none; }
+}
