@@ -1,5 +1,6 @@
 // ===== core/ai: the computer driver, who reads the track ahead and feathers the trigger =====
 import { cornerLimit } from './racer.js';
+import { giveWay } from './traffic.js';
 
 // margin: how close to the grip limit it dares to corner. wobble: how much that wanders from lap to
 // lap (a rookie sometimes overcooks a turn and comes off).
@@ -10,9 +11,10 @@ export const SKILLS = {
 };
 const q = {};
 // The trigger the computer squeezes this frame. rnd gives numbers in [0, 1); its mood changes now
-// and then, which is what makes its laps differ.
-export function aiTrigger(r, skill, dt, rnd = Math.random) {
+// and then, which is what makes its laps differ. others: the other cars, to give way to at crossings.
+export function aiTrigger(r, skill, dt, rnd = Math.random, others = []) {
   if (!r.onTrack) return 0;
+  if (others.length && giveWay(r, others)) return 0;
   const sp = r.spec, P = r.path, v = r.v;
   r.aiMood = r.aiMood ?? 0;
   if ((r.aiT = (r.aiT ?? 0) - dt) <= 0) { r.aiT = 1.5 + rnd() * 2.5; r.aiMood = (rnd() * 2 - 1); }

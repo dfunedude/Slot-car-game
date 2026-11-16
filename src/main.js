@@ -24,7 +24,7 @@ function resize() {
 resize.auto = true;
 
 // what the session tells the deck and the HUD
-session.onEvent = (kind, d) => {
+session.ui = (kind, d) => {
   if (kind === 'lap') { flashLane(d.slot); if (d.best && session.race.timing[d.slot].laps > 1 && session.drivers[d.slot] === 'human') toast(`Best lap: ${d.t.toFixed(2)} s`, 1600); }
   else if (kind === 'off' && session.drivers[d.slot] === 'human') {
     toast(d.why === 'end' ? 'Off the end of the track! Tap the car or press R to put it back.' : d.why === 'hit' ? 'Crash at the crossing! Tap the car or press R.' : 'Too fast for that turn! Tap the car or press R to put it back.', 2600);
@@ -65,9 +65,9 @@ function boot() {
   buildLamp();
   preloadPieces();
   session.cars.forEach((c, i) => c.setModel(state.garage[i].key, state.garage[i].li));
-  buildControls();
   if (saved && Array.isArray(saved.layout) && saved.layout.length) layout.load(saved.layout);
   else if (!saved) buildPreset(layout, 'club');
+  buildControls();
   syncViews();
   if (saved && saved.fast === true) setFastGraphics(true);
   session.drivers.forEach((d, i) => session.setDriver(i, d));

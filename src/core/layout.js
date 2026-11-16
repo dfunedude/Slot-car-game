@@ -29,7 +29,7 @@ export class Layout {
       const A = ends[a];
       for (let b = a + 1; b < ends.length; b++) {
         const B = ends[b];
-        if (A.p === B.p || A.p.conn[A.i] || B.p.conn[B.i]) continue;
+        if (A.p === B.p || A.p.conn[A.i] || B.p.conn[B.i] || A.p.def.nl !== B.p.def.nl) continue;
         if (Math.abs(A.x - B.x) > 0.3 || Math.abs(A.z - B.z) > 0.3) continue;
         if (Math.cos(A.h - B.h) > -0.995) continue;
         A.p.conn[A.i] = { p: B.p, i: B.i };
@@ -37,10 +37,10 @@ export class Layout {
       }
     }
   }
-  freeEnds(skip) {
+  freeEnds(skip, nl) {
     const out = [];
     for (const p of this.pieces) {
-      if (p === skip || p.lifted) continue;
+      if (p === skip || p.lifted || (nl && p.def.nl !== nl)) continue;
       p.conn.forEach((c, i) => { if (!c) out.push({ p, i, ...this.endWorld(p, i) }); });
     }
     return out;
@@ -62,6 +62,8 @@ export class Layout {
   }
   // the start/finish piece laps are counted on (the first one laid)
   startPiece() { return this.pieces.find(p => p.def.start && !p.lifted) || null; }
+  // how many lanes the racing has: the start piece's, or the first piece's without one
+  laneCount() { const p = this.startPiece() || this.pieces[0]; return p ? p.def.nl : 2; }
   serialize() {
     return this.pieces.map(p => ({ t: p.type, x: +p.x.toFixed(4), z: +p.z.toFixed(4), r: +p.rot.toFixed(6) }));
   }

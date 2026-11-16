@@ -40,6 +40,8 @@
 .key svg { width: 20px; height: 20px; flex: 0 0 auto; }
 .key.slim { min-height: 34px; padding: 0 10px; font-size: 14px; }
 .key.go { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-deep); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.key.reset svg { width: 16px; height: 16px; }
+.hint { flex: 0 1 auto; min-width: 0; color: var(--ivory-dim); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .key.reset.is-due { background: var(--red); border-color: #7a1a12; color: #fff; animation: due 0.9s infinite alternate; }
 @keyframes due { from { filter: brightness(1); } to { filter: brightness(1.35); } }
 select.key { appearance: none; -webkit-appearance: none; padding-right: 30px;
@@ -51,8 +53,11 @@ select.key.slim { padding-right: 26px; background-position: calc(100% - 14px) 50
 /* ---- the two hand controllers ---- */
 .controllers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width: 0; }
 .ctl { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 7px 8px 8px; border-radius: 10px; background: var(--deck-sunk); border: 1px solid var(--deck-line); }
+#deck.lanes-4 .controllers { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .ctl[data-lane="0"] { border-top: 3px solid var(--red); }
 .ctl[data-lane="1"] { border-top: 3px solid var(--blue); }
+.ctl[data-lane="2"] { border-top: 3px solid var(--green); }
+.ctl[data-lane="3"] { border-top: 3px solid var(--yellow); }
 .ctl-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .ctl-head .driver { min-width: 0; flex: 0 1 auto; }
 .ctl-head .reset { margin-left: auto; }
@@ -64,6 +69,8 @@ select.key.slim { padding-right: 26px; background-position: calc(100% - 14px) 50
 .trigger .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #6a3404, var(--accent)); }
 .ctl[data-lane="0"] .trigger .fill { background: linear-gradient(90deg, #5a1410, var(--red)); }
 .ctl[data-lane="1"] .trigger .fill { background: linear-gradient(90deg, #102a5a, var(--blue)); }
+.ctl[data-lane="2"] .trigger .fill { background: linear-gradient(90deg, #0f3a1c, var(--green)); }
+.ctl[data-lane="3"] .trigger .fill { background: linear-gradient(90deg, #4a3a08, var(--yellow)); }
 .trigger .plunger { position: absolute; top: 3px; bottom: 3px; width: 22px; left: 0; margin-left: 2px; border-radius: 5px;
   background: linear-gradient(180deg, #e8e8e8, #8f8f8f 60%, #bdbdbd); box-shadow: 0 2px 4px rgba(0,0,0,.6); }
 .trigger .lbl { position: absolute; inset: 0; display: grid; place-items: center; font: 700 12px/1 var(--font-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--ivory-dim); pointer-events: none; }
@@ -107,7 +114,17 @@ select.key.slim { padding-right: 26px; background-position: calc(100% - 14px) 50
 .stats .bar i { display: block; height: 100%; background: var(--accent); }
 .stats .era { grid-column: 1 / -1; text-transform: none; letter-spacing: .02em; font-size: 12px; color: var(--ivory); font-weight: 500; }
 
+/* four controllers in a row where there's room, two by two where there isn't */
+@media (max-width: 760px) {
+  #deck.lanes-4 .controllers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #deck.lanes-4 .panel { height: 300px; }
+}
+@media (max-width: 1100px) {
+  #deck.lanes-4 .key.reset span { display: none; }
+}
 @media (max-width: 520px) {
+  .key.reset span { display: none; }
+  .hint { display: none; }
   .controllers { gap: 8px; }
   .ctl { padding: 6px; }
   .ctl-head { gap: 5px; }

@@ -1,6 +1,7 @@
 // ===== ui/hud: the timing board, the banner, the clock and the deck's button states =====
 import { graphics } from '../render/stage.js';
-import { fmtTime, MODES, LANE_NAMES } from '../core/race.js';
+import { fmtTime, MODES, LANE_NAMES, MAX_LANES } from '../core/race.js';
+import { SKILLS } from '../core/ai.js';
 import { SPECS } from '../core/specs.js';
 import { layout, sound, session, state } from '../state.js';
 import { $ } from './dom.js';
@@ -31,18 +32,33 @@ export function updateFastBtn() {
 }
 
 // ---- the timing board ----
-// Rewritten a few times a second, and each row only when its text changes.
-const rows = [0, 1].map(i => document.querySelector(`.lane-row[data-lane="${i}"]`));
-const rowText = ['', ''];
+// One row per lane, rewritten a few times a second, and each row only when its text changes.
+const rows = Array.from({ length: MAX_LANES }, (_, i) => {
+  const el = document.createElement('div');
+  el.className = 'lane-row'; el.dataset.lane = i;
+  el.innerHTML = `<span class="chip-dot ${LANE_NAMES[i].toLowerCase()}"></span><span class="who"></span><span class="laps"></span><span class="t last"></span><span class="t best"></span>`;
+  $('board').appendChild(el);
+  return el;
+});
+const rowText = rows.map(() => '');
+// what a lane's driver is called: You (or P1, P2… when several people play), or the computer's skill
+export function driverName(i, long = false) {
+  const who = session.drivers[i];
+  if (SKILLS[who]) return long ? `The ${SKILLS[who].name.toLowerCase()} computer` : `CPU ${SKILLS[who].name}`;
+  if (who !== 'human') return '';
+  const humans = session.drivers.slice(0, session.lanes).map((d, k) => (d === 'human' ? k : -1)).filter(k => k >= 0);
+  return humans.length > 1 ? `${long ? 'Player ' : 'P'}${humans.indexOf(i) + 1}` : 'You';
+}
 let boardT = 0;
 export function updateBoard(dt, force) {
   if (!force && (boardT -= dt) > 0) return;
   boardT = 0.12;
   const race = session.race;
   rows.forEach((el, i) => {
-    const who = session.drivers[i], T = race.timing[i], car = session.cars[i];
-    el.hidden = who === 'off';
-    const name = `${who === 'ai' ? 'CPU' : who === 'human' ? (session.drivers.filter(d => d === 'human').length > 1 ? `P${i + 1}` : 'You') : ''} · ${SPECS[car.key || 'f1'].name}`;
+    const T = race.timing[i], car = session.cars[i];
+    el.hidden = !session.active(i);
+    if (el.hidden) { rowText[i] = ''; return; }
+    const name = `${driverName(i)} · ${SPECS[car.key || 'f1'].name}`;
     const laps = race.isRace ? `L ${Math.min(T.laps + (T.armed && !T.done ? 1 : 0), race.laps)}/${race.laps}` : `L ${T.laps}`;
     const place = T.done ? ` P${T.place}` : '';
     const off = car.racer.state === 'fly' || car.racer.state === 'reset';
@@ -95,7 +111,6 @@ export function updateBanner(dt) {
 export function showResult() {
   const race = session.race, [w] = race.order;
   if (w === undefined) return;
-  const T = race.timing[w], who = session.drivers[w];
-  const name = who === 'ai' ? 'The computer' : session.drivers.filter(d => d === 'human').length > 1 ? `Player ${w + 1}` : 'You';
+  const T = race.timing[w], name = driverName(w, true);
   banner(`${LANE_NAMES[w]} wins<small>${name} · ${race.laps} laps in ${fmtTime(T.finishAt)} · best lap ${fmtTime(T.best)}</small>`, 6000);
 }

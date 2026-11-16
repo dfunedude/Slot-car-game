@@ -1,5 +1,6 @@
 // ===== ui/garage: choosing each lane's car and its paint =====
 import { specBars } from '../core/specs.js';
+import { LANE_NAMES } from '../core/race.js';
 import { CARS, LIVERIES, swatch } from '../cars/liveries.js';
 import { css } from '../render/textures.js';
 import { session, state } from '../state.js';
@@ -16,13 +17,21 @@ export function buildGarage() {
     b.addEventListener('click', () => pickCar(c.key, state.garage[state.garageLane].key === c.key ? state.garage[state.garageLane].li : defaultPaint(c.key)));
     $('carSlot').appendChild(b);
   }
-  document.querySelectorAll('.seg-btn').forEach(b => b.addEventListener('click', () => { state.garageLane = +b.dataset.lane; renderGarage(); }));
+  const seg = $('laneSeg');
+  LANE_NAMES.forEach((name, i) => {
+    const b = document.createElement('button');
+    b.className = 'seg-btn'; b.type = 'button'; b.dataset.lane = i; b.setAttribute('role', 'radio');
+    b.innerHTML = `<span class="chip-dot ${name.toLowerCase()}"></span>${name}`;
+    b.addEventListener('click', () => { state.garageLane = i; renderGarage(); });
+    seg.appendChild(b);
+  });
   renderGarage();
 }
-// a car new to a lane comes in a paint the other lane isn't using
+// a car new to a lane comes in a paint no other lane is using, if there's one left
 function defaultPaint(key) {
-  const other = state.garage[1 - state.garageLane];
-  return other.key === key && other.li === 0 ? 1 : 0;
+  const used = state.garage.filter((g, i) => i !== state.garageLane && g.key === key).map(g => g.li);
+  const free = LIVERIES[key].findIndex((L, li) => !used.includes(li));
+  return free < 0 ? 0 : free;
 }
 export function pickCar(key, li) {
   const i = state.garageLane;
@@ -31,8 +40,13 @@ export function pickCar(key, li) {
   renderGarage(); updateBoard(0, true); save();
 }
 export function renderGarage() {
+  // only the lanes the track has
+  if (state.garageLane >= session.lanes) state.garageLane = 0;
   const i = state.garageLane, g = state.garage[i];
-  document.querySelectorAll('.seg-btn').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.lane === i)));
+  document.querySelectorAll('#laneSeg .seg-btn').forEach(b => {
+    b.hidden = +b.dataset.lane >= session.lanes;
+    b.setAttribute('aria-checked', String(+b.dataset.lane === i));
+  });
   document.querySelectorAll('.chip.car').forEach(b => b.classList.toggle('is-on', b.dataset.car === g.key));
   const paints = $('paints');
   paints.innerHTML = '';

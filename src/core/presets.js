@@ -5,7 +5,8 @@ import { PI } from './geometry.js';
 import { APPEND } from './pieces.js';
 
 const rep = (op, n) => Array(n).fill(op);
-// short names for the build steps; curves and banks are named by radius or angle and the way they turn
+// Short names for the build steps; curves and banks are named by radius or angle and the way they
+// turn (C12L, B180R). A W in front picks the four-lane piece (WS, WC15L, WB180L).
 const SHORT = { S: 'straight', H: 'short', L: 'long', T: 'start', X: 'swap' };
 
 export const PRESETS = {
@@ -27,15 +28,31 @@ export const PRESETS = {
       { from: 'x', end: 1 }, 'T', ...rep('C12R', 6), 'S',
       { from: 'x', end: 2 }, 'S', ...rep('C12L', 6), 'S'],
   },
+  // four-lane circuits: each has a four-lane swap, so over two laps every lane runs the same distance
+  oval4: { name: 'Four-lane oval', lanes: 4, ops: ['WT', 'WL', ...rep('WC15L', 4), 'WX', 'WS', ...rep('WC15L', 4)] },
+  speedway4: { name: 'Four-lane speedway', lanes: 4, ops: ['WT', 'WL', 'WL', 'WS', 'WB180L', 'WX', 'WL', 'WS', 'WS', 'WB180L'] },
+  road4: {
+    name: 'Four-lane road course', lanes: 4,
+    ops: ['WT', 'WL', 'WC15L', 'WC15R', ...rep('WC12L', 4),
+      'WX', 'WS', 'WC15L', 'WC15R', ...rep('WC12L', 4)],
+  },
+  fig84: {
+    name: 'Four-lane figure eight', lanes: 4,
+    ops: [{ place: 'wcross', x: 0, z: 0, rot: -PI / 4, label: 'x' },
+      { from: 'x', end: 1 }, 'WT', ...rep('WC15R', 6), 'WS',
+      { from: 'x', end: 2 }, 'WS', ...rep('WC15L', 6), 'WS'],
+  },
 };
 
 const CURVE = new RegExp('^C(\\d+)([LR])$'), BANKED = new RegExp('^B(90|180)([LR])$');
 function kindOf(op) {
-  if (SHORT[op]) return SHORT[op];
-  let m = CURVE.exec(op);
-  if (m) return `c${m[1]}${m[2]}`;
-  m = BANKED.exec(op);
-  if (m) return `bank${m[1]}${m[2]}`;
+  const w = op[0] === 'W' && op.length > 1 ? 'w' : '';
+  const o = w ? op.slice(1) : op;
+  if (SHORT[o]) return w + SHORT[o];
+  let m = CURVE.exec(o);
+  if (m) return `${w}c${m[1]}${m[2]}`;
+  m = BANKED.exec(o);
+  if (m) return `${w}bank${m[1]}${m[2]}`;
   throw new Error('unknown preset step ' + op);
 }
 

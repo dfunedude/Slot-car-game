@@ -1,6 +1,6 @@
 // ===== ui/editor: laying, dragging, rotating and deleting track; ready-made circuits =====
-import { PI, TAU, TABLE_W, TABLE_D, TRACK_W, normAng, clamp } from '../core/geometry.js';
-import { APPEND } from '../core/pieces.js';
+import { PI, TAU, TABLE_W, TABLE_D, normAng, clamp } from '../core/geometry.js';
+import { APPEND, PIECES } from '../core/pieces.js';
 import { PRESETS, appendPiece, buildPreset } from '../core/presets.js';
 import { PieceView, showMarkers } from '../world/track.js';
 import { layout, views, sound, session, state } from '../state.js';
@@ -28,17 +28,17 @@ export function highlight() {
   }
 }
 function pushUndo() { state.undo.push(JSON.stringify(layout.serialize())); if (state.undo.length > 80) state.undo.shift(); updateButtons(); }
-const EDGE = TRACK_W / 2 + 0.4;
 function pieceOffTable(p) {
+  const EDGE = p.def.width / 2 + 0.4;
   for (const r of p.def.routes) for (let i = 0; i <= 8; i++) {
     const q = layout.toWorld(p, r.at(r.len * i / 8));
     if (Math.abs(q.x) > TABLE_W / 2 - EDGE || Math.abs(q.z) > TABLE_D / 2 - EDGE) return true;
   }
   return false;
 }
-function freeEndNear(x, z) {
+function freeEndNear(x, z, nl) {
   let best = null, bd = Infinity;
-  for (const f of layout.freeEnds()) { const d = Math.hypot(f.x - x, f.z - z); if (d < bd) { bd = d; best = f; } }
+  for (const f of layout.freeEnds(null, nl)) { const d = Math.hypot(f.x - x, f.z - z); if (d < bd) { bd = d; best = f; } }
   return best ? { p: best.p, i: best.i } : null;
 }
 function freeSpot() {
@@ -50,11 +50,25 @@ function freeSpot() {
   }
   return { x: t.x, z: t.z };
 }
+// The palette shows two-lane or four-lane pieces. Switching moves the place to build to an open
+// end of that width, if there is one; otherwise the next piece goes down on its own.
+export function setGauge(nl) {
+  state.gauge = nl;
+  document.querySelectorAll('#gaugeSeg .seg-btn').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.gauge === nl)));
+  document.querySelectorAll('#palette .chip').forEach(b => { b.hidden = +b.dataset.lanes !== nl; });
+  if (state.active && state.active.p.def.nl !== nl) {
+    const f = layout.freeEnds(null, nl)[0];
+    state.active = f ? { p: f.p, i: f.i } : null;
+    refreshMarkers();
+  }
+}
 export function addPiece(kind) {
   sound.init();
   const a = APPEND[kind];
   pushUndo();
   let p, next;
+  // two-lane and four-lane track don't join: a piece of the other width goes down on its own
+  if (state.active && state.active.p.def.nl !== PIECES[a.type].nl) state.active = null;
   if (state.active) {
     ({ p, next } = appendPiece(layout, layout.endWorld(state.active.p, state.active.i), kind));
   } else {
@@ -68,7 +82,7 @@ export function addPiece(kind) {
     return;
   }
   layout.connectAll();
-  state.active = next >= 0 && !p.conn[next] ? { p, i: next } : freeEndNear(layout.center(p).x, layout.center(p).z);
+  state.active = next >= 0 && !p.conn[next] ? { p, i: next } : freeEndNear(layout.center(p).x, layout.center(p).z, p.def.nl);
   state.sel = p;
   if (p.conn.some(Boolean)) sound.snap();
   trackChanged();
@@ -133,6 +147,7 @@ export function loadPreset(key) {
   }
   buildPreset(layout, key);
   state.sel = null; state.active = null;
+  setGauge(layout.laneCount());
   trackChanged();
   toast(`${PRESETS[key].name} laid out.`);
 }
@@ -154,7 +169,7 @@ export function dragMove(pt) {
   p.z = clamp(pt.z + d.off.z, -TABLE_D / 2, TABLE_D / 2);
   p.rot = d.start.rot;
   let best = null;
-  const free = layout.freeEnds(p);
+  const free = layout.freeEnds(p, p.def.nl);
   for (let i = 0; i < p.def.ends.length; i++) {
     const e = layout.endWorld(p, i);
     for (const f of free) { const dd = Math.hypot(e.x - f.x, e.z - f.z); if (dd < 3.4 && (!best || dd < best.d)) best = { d: dd, i, f }; }
@@ -174,6 +189,6 @@ export function endDrag(commit) {
   state.drag = null;
   layout.connectAll();
   if (commit && d.snap) sound.snap();
-  if (!state.active) state.active = freeEndNear(p.x, p.z);
+  if (!state.active) state.active = freeEndNear(p.x, p.z, p.def.nl);
   trackChanged();
 }

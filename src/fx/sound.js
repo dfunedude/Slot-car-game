@@ -2,6 +2,7 @@
 // Each car has its own little can motor: a buzzy saw tone that climbs with speed, a gear whine an
 // octave and a fifth over it, and a hiss of braid noise. A squeal of filtered noise rises as the tail
 // steps out near the limit.
+const PANS = [-0.45, -0.15, 0.15, 0.45];
 export class Sound {
   constructor() { this.ctx = null; this.on = true; this.cars = []; }
   init() {
@@ -17,8 +18,8 @@ export class Sound {
     const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = nb.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     this.noise = nb;
-    // the two cars sit a little left and right in the stereo picture
-    this.cars = [-0.35, 0.35].map(pan => this.carVoice(pan));
+    // the cars sit across the stereo picture, red on the left to yellow on the right
+    this.cars = PANS.map(pan => this.carVoice(pan));
   }
   carVoice(pan) {
     const ctx = this.ctx, out = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
@@ -79,12 +80,12 @@ export class Sound {
   }
   // the guide pops out and the car clatters off across the table
   crash(i, speed) {
-    const pan = i ? 0.35 : -0.35;
+    const pan = PANS[i] ?? 0;
     this.burst(0.25 + speed * 0.004, 3200, 0.12, pan);
     setTimeout(() => this.burst(0.18, 1800, 0.2, pan), 90);
     setTimeout(() => this.burst(0.12, 2600, 0.15, pan), 230);
   }
-  land(i, hit, onFloor) { this.burst(Math.min(0.35, hit * 0.0018), onFloor ? 700 : 1600, onFloor ? 0.3 : 0.15, i ? 0.35 : -0.35); }
+  land(i, hit, onFloor) { this.burst(Math.min(0.35, hit * 0.0018), onFloor ? 700 : 1600, onFloor ? 0.3 : 0.15, PANS[i] ?? 0); }
   // a pure tone, for the start lights and the lap counter
   beep(freq, dur = 0.15, level = 0.18) {
     if (!this.ctx || !this.on) return;
@@ -97,5 +98,5 @@ export class Sound {
   }
   snap() { this.burst(0.2, 2400, 0.06); }
   // the mechanical lap counter's clack
-  tick(i) { this.burst(0.12, 4200, 0.04, i ? 0.35 : -0.35); }
+  tick(i) { this.burst(0.12, 4200, 0.04, PANS[i] ?? 0); }
 }

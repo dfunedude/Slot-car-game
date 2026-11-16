@@ -8,10 +8,12 @@ export const MODES = {
   r10: { name: 'Race · 10 laps', laps: 10 },
   r25: { name: 'Race · 25 laps', laps: 25 },
 };
-export const LANE_NAMES = ['Red', 'Blue'];
-// Lane 1 (red) is the left-hand slot looking down the start straight in the racing direction. Seen
-// looking out of the start piece's back end, that's its right-hand slot.
-const SLOT_AT_START = [1, 0];
+export const LANE_NAMES = ['Red', 'Blue', 'Green', 'Yellow'];
+export const MAX_LANES = 4;
+// Lane 1 (red) is the left-hand slot looking down the start straight in the racing direction, then
+// blue, green and yellow across to the right. Seen looking out of the start piece's back end, red is
+// its right-hand slot.
+const slotAtStart = (lane, nl) => nl - 1 - lane;
 const GRID_GAP = 0.7;            // the guide pins wait this far behind the line
 export const COUNTDOWN = 4;      // seconds of lights before the green
 
@@ -19,8 +21,8 @@ export const COUNTDOWN = 4;      // seconds of lights before the green
 // piece it goes on the first piece laid.
 export function gridPlace(layout, racer) {
   const st = layout.startPiece() || layout.pieces.find(p => !p.lifted);
-  if (!st) { racer.lift(); return false; }
-  const n = LanePath.laneAt(st, 0, SLOT_AT_START[racer.slot]);
+  if (!st || racer.slot >= st.def.nl) { racer.lift(); return false; }
+  const n = LanePath.laneAt(st, 0, slotAtStart(racer.slot, st.def.nl));
   if (!n) { racer.lift(); return false; }
   const u = st.def.start ? START_T - GRID_GAP : 1;
   racer.place(st, n.l, n.d, Math.max(u, racer.spec.wb + 0.1));
@@ -32,8 +34,8 @@ export class Race {
   constructor() {
     this.mode = 'practice'; this.phase = 'free';   // free (practice), lights, green, done
     this.clock = 0; this.lights = 0; this.order = [];
-    this.racing = 2;       // how many lanes have a driver; the caller keeps it up to date
-    this.timing = [blankTiming(), blankTiming()];
+    this.racing = 2;       // how many cars are racing; the caller keeps it up to date
+    this.timing = Array.from({ length: MAX_LANES }, blankTiming);
     this.onEvent = null;   // (kind, data): 'lap', 'best', 'green', 'light', 'finish', 'done'
   }
   get laps() { return MODES[this.mode].laps; }
@@ -41,7 +43,7 @@ export class Race {
   // start a session: practice runs at once, a race waits for the lights
   begin(mode) {
     this.mode = mode;
-    this.timing = [blankTiming(), blankTiming()];
+    this.timing = Array.from({ length: MAX_LANES }, blankTiming);
     this.clock = 0; this.order = [];
     if (this.isRace) { this.phase = 'lights'; this.lights = COUNTDOWN; this.lastLight = -1; } else this.phase = 'free';
   }

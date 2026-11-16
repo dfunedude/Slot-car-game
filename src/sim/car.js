@@ -1,7 +1,7 @@
 // ===== sim/car: a car on the table: its model, set where its racer says, wheels turning, braids sparking =====
 import * as THREE from 'three';
 import { SPECS } from '../core/specs.js';
-import { Racer, GUIDE } from '../core/racer.js';
+import { GUIDE } from '../core/racer.js';
 import { scene } from '../render/stage.js';
 import { TEX } from '../render/textures.js';
 import { disposeModel } from '../render/kit.js';
@@ -13,9 +13,9 @@ const offRingGeo = new THREE.RingGeometry(1.5, 1.8, 40).rotateX(-Math.PI / 2);
 const carHitGeo = new THREE.BoxGeometry(3.4, 1.6, 2.2);
 
 export class CarView {
-  constructor(slot) {
+  constructor(slot, racer) {
     this.slot = slot;
-    this.racer = new Racer(SPECS.f1, slot);
+    this.racer = racer;
     this.root = new THREE.Group();
     this.body = null; this.axles = [];
     // a generous box to tap the car by, and a ring that pulses round it while it waits to be put back

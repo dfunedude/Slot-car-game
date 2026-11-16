@@ -88,10 +88,9 @@ export class Racer {
     return true;
   }
   // the body's pose on the track, from the guide pin and the rear axle
-  trackPose() {
-    const P = this.path, g = P.at(this.s, this._g), r = P.at(this.s - this.spec.wb, this._r);
-    const hc = Math.atan2(g.z - r.z, g.x - r.x), hb = hc + this.drift, back = this.a + GUIDE;
-    const o = this.pose;
+  trackPose(s = this.s, drift = this.drift, o = this.pose) {
+    const P = this.path, g = P.at(s, this._g), r = P.at(s - this.spec.wb, this._r);
+    const hc = Math.atan2(g.z - r.z, g.x - r.x), hb = hc + drift, back = this.a + GUIDE;
     o.x = g.x - Math.cos(hb) * back; o.z = g.z - Math.sin(hb) * back;
     o.y = (g.y + r.y) / 2; o.h = hb; o.roll = (g.roll + r.roll) / 2;
     o.pitch = Math.atan2(g.y - r.y, this.spec.wb);
@@ -112,7 +111,7 @@ export class Racer {
       pr: why === 'end' ? -1.5 : 0,
       ground: false,
     };
-    this.sOff = this.s;
+    this.sOff = this.s; this.offWhy = why;
     this.state = 'fly'; this.rest = 0; this.ratio = 0; this.slip = 0;
     this.speedOff = v; this.v = 0;
     if (this.onDeslot) this.onDeslot(this, why);
@@ -157,15 +156,24 @@ export class Racer {
   }
   get resting() { return this.state === 'fly' && this.rest > 0.25; }
   // a marshal picks the car up and sets it back in its slot a little before where it came off
+  // Where the marshal sets the car back down: a little before where it came off, or after a
+  // collision, short of the crossing or lane swap it happened on, so it doesn't restart in the way.
+  homeS() {
+    const P = this.path, sp = this.spec;
+    let s = this.sOff - 2.5;
+    if (this.offWhy === 'hit') {
+      const g = P.segAt(this.sOff);
+      if (g.p.def.cross || g.p.def.swap) s = Math.min(s, g.s0 - 1.5);
+    }
+    P.cover(s - sp.wb - 3, this.sOff + 3);
+    return Math.max(P.s0 + sp.wb + 0.5, s);
+  }
+  homePose(out = {}) { return this.trackPose(this.homeS(), 0, out); }
   reset() {
     if (this.state !== 'fly') return false;
-    const P = this.path, sp = this.spec;
-    const sHome = Math.max(P.s0 + sp.wb + 0.5, this.sOff - 2.5);
     const from = { ...this.pose };
-    this.s = sHome; this.drift = 0;
-    P.cover(this.s - sp.wb - 3, this.s + 3);
-    const to = { ...this.trackPose() };
-    Object.assign(this.pose, from);
+    this.s = this.homeS(); this.drift = 0;
+    const to = this.trackPose(this.s, 0, {});
     this.back = { t: 0, from, to };
     this.state = 'reset';
     return true;

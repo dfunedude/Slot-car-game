@@ -2,18 +2,20 @@
 // Black molded track with a slot down each lane, a flat steel rail either side of each slot, red and
 // white curbing round the outside of the turns, and a start/finish piece with a light tree.
 import * as THREE from 'three';
-import { PI, TRACK_W, TRACK_TOP } from '../core/geometry.js';
+import { PI, TRACK_TOP, SPACING } from '../core/geometry.js';
 import { PIECES, START_T } from '../core/pieces.js';
 import { scene } from '../render/stage.js';
 import { M, glowMat, paint } from '../render/materials.js';
 import { UNIT, mergeList, Kit, castsShadow } from '../render/kit.js';
 
-const HW = TRACK_W / 2;
-// the cross-section of the piece at centreline sample q (with bank phi): (lat, y) -> world point.
-// Points with y = 0 stay on the table, so a banked turn stands on a wedge.
-function section(q, phi) {
+// the lanes' colours, red to yellow across the track left to right in the racing direction
+export const LANE_HEX = [0xc8281c, 0x1d4fb8, 0x2f8f3e, 0xe0b21e];
+// the cross-section of a piece hw inches either side of its centreline, at centreline sample q
+// (with bank phi): (lat, y) -> world point. Points with y = 0 stay on the table, so a banked turn
+// stands on a wedge.
+function section(q, phi, hw) {
   const c = Math.cos(phi), s = Math.sin(phi), nx = -Math.sin(q.h), nz = Math.cos(q.h);
-  const lift = HW * Math.abs(s);
+  const lift = hw * Math.abs(s);
   return (lat, y) => {
     const l = lat * c, Y = y === 0 ? 0 : lift - lat * s + y * c;
     return [q.x + nx * l, Y, q.z + nz * l];
@@ -21,14 +23,14 @@ function section(q, phi) {
 }
 // sweep a cross-section profile [(lat, y)] along a centreline route; u runs along the length
 // (one repeat per uLen inches), v across the profile
-function sweepRoute(route, phi, profile, uLen = 3, step = 0.4) {
+function sweepRoute(route, phi, profile, hw, uLen = 3, step = 0.4) {
   const n = route.kind === 'arc' ? Math.max(4, Math.ceil(route.len / step)) : 1;
   const pos = [], uv = [], idx = [], P = profile.length;
   const q = {};
   for (let i = 0; i <= n; i++) {
     const t = route.len * i / n;
     route.at(t, q);
-    const f = section(q, phi ? phi(t) : 0);
+    const f = section(q, phi ? phi(t) : 0, hw);
     profile.forEach(([lat, y], j) => { pos.push(...f(lat, y)); uv.push(t / uLen, j / (P - 1)); });
   }
   for (let i = 0; i < n; i++) for (let j = 0; j < P - 1; j++) {
@@ -63,11 +65,11 @@ function finish(pos, uv, idx) {
   return g;
 }
 // molded body: the top, rounded down at the edges to the table
-const BODY = [[-HW, 0], [-HW, TRACK_TOP - 0.05], [-HW + 0.06, TRACK_TOP], [HW - 0.06, TRACK_TOP], [HW, TRACK_TOP - 0.05], [HW, 0]];
+const BODY = hw => [[-hw, 0], [-hw, TRACK_TOP - 0.05], [-hw + 0.06, TRACK_TOP], [hw - 0.06, TRACK_TOP], [hw, TRACK_TOP - 0.05], [hw, 0]];
 // the curb on the outside of a turn (lat is negative: the outside of a right-hand turn as built)
-const KERB = [[-HW - 0.75, 0], [-HW - 0.75, 0.05], [-HW - 0.02, TRACK_TOP * 0.75], [-HW, TRACK_TOP * 0.75]];
+const KERB = hw => [[-hw - 0.75, 0], [-hw - 0.75, 0.05], [-hw - 0.02, TRACK_TOP * 0.75], [-hw, TRACK_TOP * 0.75]];
 // on a banked turn the curb carries on up the slope from the raised outside edge
-const KERB_BANKED = [[-HW - 0.6, TRACK_TOP * 0.55], [-HW, TRACK_TOP * 0.9]];
+const KERB_BANKED = hw => [[-hw - 0.6, TRACK_TOP * 0.55], [-hw, TRACK_TOP * 0.9]];
 
 // start lights on the start piece: three reds and a green, each its own lens so they light one by one
 export const startLamps = [glowMat(0xff2a14, 0), glowMat(0xff2a14, 0), glowMat(0xff2a14, 0), glowMat(0x38ff5a, 0)];
@@ -78,38 +80,46 @@ function pieceParts(type) {
   if (pieceGeoCache.has(type)) return pieceGeoCache.get(type);
   const def = PIECES[type];
   const k = new Kit();
+  const hw = def.width / 2;
   def.routes.forEach((r, i) => {
-    const body = sweepRoute(r, def.phi, BODY, 3);
+    const body = sweepRoute(r, def.phi, BODY(hw), hw, 3);
     // the second road of a crossing sits a hair higher, so the two tops don't flicker through each other
     k.put(M.track, body, 0, i * 0.004, 0);
-    if (def.curve) k.put(M.kerb, sweepRoute(r, def.phi, def.banked ? KERB_BANKED : KERB, 1.5));
+    if (def.curve) k.put(M.kerb, sweepRoute(r, def.phi, (def.banked ? KERB_BANKED : KERB)(hw), hw, 1.5));
   });
   for (const L of def.lanes) {
     k.put(M.slot, stripAlong(L, -0.045, 0.045, 0.003));
     k.put(M.rail, stripAlong(L, -0.14, -0.075, 0.006));
     k.put(M.rail, stripAlong(L, 0.075, 0.14, 0.006));
   }
-  if (def.start) startDressing(k);
+  if (def.start) startDressing(k, def);
   if (def.swap) {
     // a white arrow either side, so the swap reads from across the table
-    for (const sx of [-1, 1]) k.box(M.whiteLine, 1.2, 0.01, 0.12, 4.5 + sx * 3.2, TRACK_TOP + 0.004, 0);
+    for (const sx of [-1, 1]) k.box(M.whiteLine, 1.2, 0.01, 0.12, def.len / 2 + sx * (def.len / 2 - 1.3), TRACK_TOP + 0.004, 0);
   }
   const parts = { meshes: k.parts(), foot: footprintGeo(def) };
   pieceGeoCache.set(type, parts);
   return parts;
 }
-function startDressing(k) {
-  // the checkered line, and the grid boxes behind it
-  k.put(M.checker, UNIT.box, START_T, TRACK_TOP + 0.003, 0, 0, PI / 2, 0, TRACK_W - 0.2, 0.004, 0.4);
-  for (const lat of [-0.85, 0.85]) for (const s of [-1, 1]) k.box(M.whiteLine, 0.05, 0.004, 0.5, START_T - 3.2, TRACK_TOP + 0.003, lat + s * 0.45);
-  // the terminal tab on the left, where the power pack's wires screw on
-  k.box(M.trackSide, 1.8, TRACK_TOP, 0.7, 2.2, TRACK_TOP / 2, -HW - 0.35);
-  [1.6, 2.0, 2.4, 2.8].forEach((x, i) => {
-    k.cylY(M.chrome, 0.07, 0.1, x, TRACK_TOP + 0.05, -HW - 0.4);
-    k.cylZ(i < 2 ? M.wireRed : M.wireBlack, 0.03, 0.7, x, 0.03, -HW - 0.95);
-  });
+function startDressing(k, def) {
+  const hw = def.width / 2, nl = def.nl;
+  // the checkered line, and a grid box behind it in each lane, with the lane's colour spot
+  k.put(M.checker, UNIT.box, START_T, TRACK_TOP + 0.003, 0, 0, PI / 2, 0, def.width - 0.2, 0.004, 0.4);
+  for (let i = 0; i < nl; i++) {
+    const lat = (i - (nl - 1) / 2) * SPACING;
+    for (const s of [-1, 1]) k.box(M.whiteLine, 0.05, 0.004, 0.5, START_T - 3.2, TRACK_TOP + 0.003, lat + s * 0.45);
+    k.put(paint(LANE_HEX[i], 0.4, 0), UNIT.cylY, START_T - 1.3, TRACK_TOP + 0.003, lat - 0.45, 0, 0, 0, 0.12, 0.004, 0.12);
+  }
+  // the terminal tab on the left, where the power pack's wires screw on: a pair for each lane
+  const tabW = 0.4 + nl * 0.6;
+  k.box(M.trackSide, tabW, TRACK_TOP, 0.7, 1.3 + tabW / 2, TRACK_TOP / 2, -hw - 0.35);
+  for (let i = 0; i < nl * 2; i++) {
+    const x = 1.6 + i * 0.3;
+    k.cylY(M.chrome, 0.065, 0.1, x, TRACK_TOP + 0.05, -hw - 0.4);
+    k.cylZ(i % 2 ? M.wireBlack : M.wireRed, 0.03, 0.7, x, 0.03, -hw - 0.95);
+  }
   // a little light tree on its post beside the line, about lap-counter size
-  const px = START_T, pz = -HW - 0.5;
+  const px = START_T, pz = -hw - 0.5;
   k.box(M.black, 0.5, 0.08, 0.5, px, 0.04, pz);
   k.box(M.black, 0.12, 1.3, 0.12, px, 0.7, pz);
   k.box(M.black, 0.3, 0.95, 0.22, px, 1.75, pz);
@@ -117,9 +127,6 @@ function startDressing(k) {
     const y = 2.08 - i * 0.22;
     for (const s of [-1, 1]) k.sphere(startLamps[i], 0.016, 0.075, 0.075, px + s * 0.15, y, pz);
   }
-  // red and blue lane spots at the line
-  k.put(paint(0xc8281c, 0.4, 0), UNIT.cylY, START_T - 1.3, TRACK_TOP + 0.003, -0.85 - 0.45, 0, 0, 0, 0.12, 0.004, 0.12);
-  k.put(paint(0x1d4fb8, 0.4, 0), UNIT.cylY, START_T - 1.3, TRACK_TOP + 0.003, 0.85 + 0.45, 0, 0, 0, 0.12, 0.004, 0.12);
 }
 // lights: red is how many reds are lit (0-3), green whether the green is
 export function setStartLights(red, green) {
@@ -131,7 +138,8 @@ setStartLights(0, false);
 const footMat = new THREE.MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.32, depthWrite: false });
 const footSnapMat = new THREE.MeshBasicMaterial({ color: 0x9fd08a, transparent: true, opacity: 0.38, depthWrite: false });
 function footprintGeo(def) {
-  return mergeList(def.routes.map(r => sweepRoute(r, def.phi, [[-HW - 0.3, TRACK_TOP + 0.03], [HW + 0.3, TRACK_TOP + 0.03]], 3, 0.8)));
+  const hw = def.width / 2;
+  return mergeList(def.routes.map(r => sweepRoute(r, def.phi, [[-hw - 0.3, TRACK_TOP + 0.03], [hw + 0.3, TRACK_TOP + 0.03]], hw, 3, 0.8)));
 }
 
 // ---- the track on the table ----

@@ -14,6 +14,8 @@
   --accent-ink: #1c1004;
   --red: #e0362a;
   --blue: #3576e8;
+  --green: #34a853;
+  --yellow: #e8bb22;
   --go: #3fbf5a;
   --font-display: "Racing Sans One", "Arial Black", Impact, sans-serif;
   --font-ui: "Barlow Semi Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
@@ -36,4 +38,6 @@ button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focu
 .chip-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 0 2px rgba(0,0,0,.4); }
 .chip-dot.red { background: var(--red); }
 .chip-dot.blue { background: var(--blue); }
+.chip-dot.green { background: var(--green); }
+.chip-dot.yellow { background: var(--yellow); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

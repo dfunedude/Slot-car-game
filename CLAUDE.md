@@ -4,7 +4,7 @@ A browser HO slot car game on three.js 0.160 with no npm dependencies. The sourc
 
 ## Commands
 
-- `npm test`: `node:test` checks of `src/core/`: presets close and fit, slots are continuous, every computer driver laps every preset in every car without coming off, flat out does come off, and a reset puts the car back
+- `npm test`: `node:test` checks of `src/core/`: presets close and fit, slots are continuous, every computer driver laps every preset in every lane and car without coming off, flat out does come off, a reset puts the car back, computers never collide at crossings, and after a collision the marshal puts cars back one at a time
 - `npm run build`: must pass before publishing. `npm run build:debug` keeps the `window.__bgp` handle for scripted browser checks.
 - `npm run dev`: serves `/` (the unbundled modules) and `/dist/` (the built page in an artifact-like skeleton) on port 8080
 
@@ -20,7 +20,9 @@ A browser HO slot car game on three.js 0.160 with no npm dependencies. The sourc
 ## Track and physics
 
 - Units are inches; heading 0 is +x and positive headings turn right; "right of travel" is (-sin h, cos h).
-- Every piece has centreline `routes` (for drawing and bounds) and `lanes` (one per slot per route, sampled tables from `makeLane`). A lane's slot index at each end is seen looking out of that end, so slot i meets slot 1 - i across a joint. `LanePath` in `core/path.js` follows a slot from piece to piece.
+- Every piece has centreline `routes` (for drawing and bounds), a lane count `nl` (2 or 4), a `width`, and `lanes` (one per slot per route, sampled tables from `makeLane`). A lane's slot index at each end is counted from the left looking out of that end, so slot i meets slot nl - 1 - i across a joint. Pieces only join pieces with the same `nl`; four-lane types start with `w`. `LanePath` in `core/path.js` follows a slot from piece to piece.
+- Lane i (red, blue, green, yellow) starts in slot nl - 1 - i looking out of the start piece's back end, i.e. red is the left-hand lane in the racing direction. `layout.laneCount()` is the start piece's lane count.
+- `core/heat.js` runs the racing (drivers per lane: 'human', 'rookie', 'pro', 'ace' or 'off'); `sim/session.js` extends it with models, lights and sound. `core/traffic.js` holds collisions, the computers' giving way at crossings and swaps, and `clearToReset` for the marshal.
 - `core/racer.js` steps the car at 240 Hz: motor, then cornering ratio = v²·|k| / grip (banking adds grip), slide builds over the limit, deslot past `SLIP_MAX`. The flight is a simple rigid body that settles on wheels, side or roof, on the table or the floor.
 - Keep the computer drivers lapping cleanly (`npm test`) after any handling change.
 

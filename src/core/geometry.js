@@ -5,7 +5,10 @@
 export const PI = Math.PI;
 export const TAU = PI * 2;
 export const TRACK_W = 3.4;          // two-lane HO track, edge to edge
-export const LANE = 0.85;            // each slot sits this far from the centreline (1.7" lane spacing)
+export const TRACK_W4 = 6.8;         // four-lane track: two two-lane widths
+export const LANE = 0.85;            // on two-lane track each slot sits this far from the centreline
+export const SPACING = 2 * LANE;     // slot to slot, 1.7", on either width
+export const widthOf = nl => (nl === 4 ? TRACK_W4 : TRACK_W);
 export const TRACK_TOP = 0.22;       // the running surface stands this high off the table
 export const S9 = 9;                 // standard straight
 export const ARC = PI / 4;           // every curve is an eighth of a circle

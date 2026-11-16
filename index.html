@@ -34,10 +34,7 @@
       </button>
       <button id="btnHelp" class="icon-btn" aria-label="How to play" title="How to play">?</button>
     </div>
-    <div id="board" class="board" aria-live="off">
-      <div class="lane-row" data-lane="0"><span class="chip-dot red"></span><span class="who"></span><span class="laps"></span><span class="t last"></span><span class="t best"></span></div>
-      <div class="lane-row" data-lane="1"><span class="chip-dot blue"></span><span class="who"></span><span class="laps"></span><span class="t last"></span><span class="t best"></span></div>
-    </div>
+    <div id="board" class="board" aria-live="off"></div>
     <div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
     <div id="toast" role="status" aria-live="polite" hidden></div>
     <div id="help" class="help" hidden>
@@ -45,11 +42,11 @@
         <h2 id="helpTitle">Racing in the basement</h2>
         <p class="lede">Mouse, trackpad and touch all work the same way.</p>
         <dl>
-          <dt>Drive</dt><dd>Hold the trigger strip on your controller and slide along it to squeeze harder. Let go and the controller brakes. Keys: Space or ↑ for the first player, W for the second.</dd>
+          <dt>Drive</dt><dd>Hold the trigger strip on your controller and slide along it to squeeze harder. Let go and the controller brakes. Keys: Space or ↑ for the first player, W for the second, P for the third and Z for the fourth.</dd>
           <dt>Corners</dt><dd>The corner meter shows how hard the tyres are working. In the yellow the tail steps out; hold it in the red and the guide pops out of the slot and the car flies off, maybe off the table.</dd>
           <dt>Reset</dt><dd>A car that has come off waits for you: tap it, press Reset on its controller, or press R, and it's set back in its slot. The computer's marshal looks after its own car.</dd>
-          <dt>Race</dt><dd>Pick practice or a race and press Start. Races wait for three red lights and go on the green. The lane swap and the crossing are where the two cars can meet.</dd>
-          <dt>Track</dt><dd>Tap a piece to add it at the glowing open end, or tap any ring to build from that end. Drag pieces and their ends snap together. Rotate, Delete, Undo and ready-made circuits are on the second row. Laps are counted on the start/finish piece.</dd>
+          <dt>Race</dt><dd>Give each lane a player, a computer driver (Rookie, Pro or Ace) or nobody. Pick practice or a race and press Start. Races wait for three red lights and go on the green. The lane swap and the crossing are where cars can meet; the computers give way to each other there.</dd>
+          <dt>Track</dt><dd>Choose two-lane or four-lane pieces, then tap a piece to add it at the glowing open end, or tap any ring to build from that end. Drag pieces and their ends snap together. Two-lane and four-lane track don't join. Rotate, Delete, Undo and ready-made circuits are on the second row. Laps are counted on the start/finish piece, and it decides how many lanes race.</dd>
           <dt>Garage</dt><dd>Choose a lane, then a car and its paint. Each car has its own top speed, pickup and grip.</dd>
           <dt>View</dt><dd>Drag to look around, pinch or scroll to zoom, two-finger drag or right-drag to pan. The camera button rides along behind your car.</dd>
         </dl>
@@ -67,39 +64,22 @@
     </div>
 
     <section class="panel" data-panel="race" role="tabpanel" aria-labelledby="tab-race">
-      <div class="controllers">
-        <div class="ctl" data-lane="0">
-          <div class="ctl-head">
-            <span class="chip-dot red"></span>
-            <select class="driver key slim" aria-label="Red lane driver"></select>
-            <button class="reset key slim" aria-label="Put the red car back">Reset</button>
-          </div>
-          <div class="trigger" role="slider" tabindex="0" aria-label="Red trigger" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <span class="fill"></span><span class="plunger"></span><span class="lbl">Hold to go</span>
-          </div>
-          <div class="meter" aria-hidden="true"><span class="needle"></span></div>
-        </div>
-        <div class="ctl" data-lane="1">
-          <div class="ctl-head">
-            <span class="chip-dot blue"></span>
-            <select class="driver key slim" aria-label="Blue lane driver"></select>
-            <button class="reset key slim" aria-label="Put the blue car back">Reset</button>
-          </div>
-          <div class="trigger" role="slider" tabindex="0" aria-label="Blue trigger" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <span class="fill"></span><span class="plunger"></span><span class="lbl">Hold to go</span>
-          </div>
-          <div class="meter" aria-hidden="true"><span class="needle"></span></div>
-        </div>
-      </div>
+      <div class="controllers" id="controllers"></div>
       <div class="row scroller">
         <select id="modeSel" class="key" aria-label="Session"></select>
         <button id="btnStart" class="key go">Start</button>
-        <select id="skillSel" class="key" aria-label="Computer driver"></select>
+        <span class="hint" id="raceHint"></span>
       </div>
     </section>
 
     <section class="panel" data-panel="track" role="tabpanel" aria-labelledby="tab-track" hidden>
-      <div class="row scroller" id="palette" role="toolbar" aria-label="Track pieces"></div>
+      <div class="row scroller" id="palette" role="toolbar" aria-label="Track pieces">
+        <div class="seg" id="gaugeSeg" role="radiogroup" aria-label="Track width">
+          <button class="seg-btn" data-gauge="2" role="radio" aria-checked="true">2-lane</button>
+          <button class="seg-btn" data-gauge="4" role="radio" aria-checked="false">4-lane</button>
+        </div>
+        <span class="divider" aria-hidden="true"></span>
+      </div>
       <div class="row scroller">
         <button id="btnRotate" class="key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>Rotate</button>
         <button id="btnDelete" class="key"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>Delete</button>
@@ -113,10 +93,7 @@
 
     <section class="panel" data-panel="garage" role="tabpanel" aria-labelledby="tab-garage" hidden>
       <div class="row scroller" id="carRow" role="toolbar" aria-label="Cars">
-        <div class="seg" role="radiogroup" aria-label="Lane">
-          <button class="seg-btn" data-lane="0" role="radio" aria-checked="true"><span class="chip-dot red"></span>Red</button>
-          <button class="seg-btn" data-lane="1" role="radio" aria-checked="false"><span class="chip-dot blue"></span>Blue</button>
-        </div>
+        <div class="seg" id="laneSeg" role="radiogroup" aria-label="Lane"></div>
         <span class="divider" aria-hidden="true"></span>
         <span id="carSlot" class="slot"></span>
       </div>

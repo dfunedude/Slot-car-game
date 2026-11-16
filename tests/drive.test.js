@@ -26,7 +26,7 @@ function run(key, carKey, slot, skill, laps, maxT = 120) {
   return { laps: race.timing[slot].laps, offs, best: race.timing[slot].best, top, t };
 }
 
-for (const key of Object.keys(PRESETS)) for (const slot of [0, 1]) {
+for (const key of Object.keys(PRESETS)) for (let slot = 0; slot < (PRESETS[key].lanes || 2); slot++) {
   test(`ace and rookie lap ${key} in lane ${slot + 1} without coming off`, () => {
     for (const carKey of Object.keys(SPECS)) for (const sk of ['ace', 'rookie']) {
       const res = run(key, carKey, slot, SKILLS[sk], 3);

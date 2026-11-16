@@ -7,5 +7,5 @@ export const layout = new Layout();
 export const views = new Map();
 export const sound = new Sound();
 export const session = new Session(layout, sound);
-// garage: the car and paint in each lane. mode: which deck tab is open. sel/active/undo/drag: the editor.
-export const state = { mode: 'race', garage: [{ key: 'f1', li: 0 }, { key: 'pony', li: 0 }], garageLane: 0, raceMode: 'practice', sel: null, active: null, undo: [], drag: null };
+// garage: the car and paint in each lane. gauge: whether the track palette shows two-lane or four-lane pieces. mode: which deck tab is open. sel/active/undo/drag: the editor.
+export const state = { mode: 'race', garage: [{ key: 'f1', li: 0 }, { key: 'pony', li: 0 }, { key: 'canam', li: 1 }, { key: 'aero', li: 2 }], garageLane: 0, gauge: 2, raceMode: 'practice', sel: null, active: null, undo: [], drag: null };

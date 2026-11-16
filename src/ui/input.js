@@ -6,7 +6,7 @@ import { views, sound, session, state } from '../state.js';
 import { updateButtons } from './hud.js';
 import { view, placeCamera, stopTween, follow } from './camera.js';
 import { markers } from '../world/track.js';
-import { refreshMarkers, highlight, beginDrag, dragMove, endDrag } from './editor.js';
+import { refreshMarkers, highlight, beginDrag, dragMove, endDrag, setGauge } from './editor.js';
 import { resetCar } from './controllers.js';
 
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -29,7 +29,7 @@ function pick(cx, cy) {
     return hits.length ? { kind: 'piece', p: hits[0].object.userData.piece, point: hits[0].point } : null;
   }
   // a car that's come off can be tapped to put it back
-  const cars = session.cars.filter(c => c.racer.state === 'fly').map(c => c.hit);
+  const cars = session.cars.filter(c => c.racer.state === 'fly' && c.root.visible).map(c => c.hit);
   const ch = ray.intersectObjects(cars, false);
   if (ch.length) return { kind: 'car', car: ch[0].object.userData.car };
   return null;
@@ -112,7 +112,7 @@ function hover(e) {
 }
 function tap(hit) {
   if (state.mode === 'track') {
-    if (hit && hit.kind === 'end') { state.active = { p: hit.end.p, i: hit.end.i }; state.sel = null; refreshMarkers(); highlight(); updateButtons(); return; }
+    if (hit && hit.kind === 'end') { state.active = { p: hit.end.p, i: hit.end.i }; state.sel = null; setGauge(hit.end.p.def.nl); refreshMarkers(); highlight(); updateButtons(); return; }
     state.sel = hit && hit.kind === 'piece' ? (state.sel === hit.p ? null : hit.p) : null;
     highlight(); updateButtons();
     return;

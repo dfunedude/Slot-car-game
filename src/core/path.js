@@ -25,7 +25,7 @@ export class LanePath {
     const last = this.segs[this.segs.length - 1];
     const x = this.exitOf(last), c = last.p.conn[x.end];
     if (!c) return false;
-    const n = LanePath.laneAt(c.p, c.i, 1 - x.slot);
+    const n = LanePath.laneAt(c.p, c.i, c.p.def.nl - 1 - x.slot);
     if (!n) return false;
     this.segs.push(this.seg(c.p, n.l, n.d, last.s0 + last.len));
     return true;
@@ -35,7 +35,7 @@ export class LanePath {
     const x = this.entryOf(first), c = first.p.conn[x.end];
     if (!c) return false;
     // running backwards into the neighbour: find its lane that leaves through c.i, then flip it
-    const n = LanePath.laneAt(c.p, c.i, 1 - x.slot);
+    const n = LanePath.laneAt(c.p, c.i, c.p.def.nl - 1 - x.slot);
     if (!n) return false;
     const L = c.p.def.lanes[n.l];
     this.segs.unshift(this.seg(c.p, n.l, -n.d, first.s0 - L.len));
