@@ -81,7 +81,7 @@ let readoutText = '';
 export function updateReadout() {
   const race = session.race;
   let text;
-  if (race.phase === 'lights') text = `<b>${MODES[race.mode].name}</b><span class="m"> · on the grid</span>`;
+  if (race.phase === 'lights') { const r = race.lightState().red; text = `<b class="m">${MODES[race.mode].name} · </b>${r ? `starts in ${4 - r}` : 'on the grid'}`; }
   else if (race.phase === 'done') text = `<b>Finished</b> · ${fmtTime(race.timing[race.order[0]].finishAt)}`;
   else text = `<b class="m">${MODES[race.mode].name} · </b>${fmtTime(race.clock)}`;
   if (text === readoutText) return;
@@ -99,13 +99,15 @@ export function banner(html, ms = 0) {
 }
 export function updateBanner(dt) {
   const race = session.race;
+  // the countdown: on the grid, then a red light and a number each second, 3, 2, 1, then the green
   if (race.phase === 'lights') {
     const L = race.lightState();
-    banner(`<div class="lights">${[0, 1, 2].map(i => `<i class="${i < L.red ? 'on' : ''}"></i>`).join('')}</div><small>Get ready…</small>`);
+    const big = L.red ? `<span class="count">${4 - L.red}</span>` : '<span class="count small">On the grid</span>';
+    banner(`<div class="lights">${[0, 1, 2].map(i => `<i class="${i < L.red ? 'on' : ''}"></i>`).join('')}</div>${big}<small>${race.laps} laps · hands off the triggers</small>`);
     return;
   }
-  if (race.phase === 'green' && race.clock < 1) { banner('<div class="lights"><i class="go"></i><i class="go"></i><i class="go"></i></div>GO!'); return; }
-  if (bannerKey.includes('class="go"') || bannerKey.includes('Get ready')) banner(null);
+  if (race.phase === 'green' && race.clock < 1) { banner('<div class="lights"><i class="go"></i><i class="go"></i><i class="go"></i></div><span class="count go">GO!</span>'); return; }
+  if (bannerKey.includes('class="count')) banner(null);
   if (bannerT > 0 && (bannerT -= dt) <= 0) banner(null);
 }
 export function showResult() {

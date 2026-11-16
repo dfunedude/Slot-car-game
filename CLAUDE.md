@@ -32,6 +32,7 @@ A browser HO slot car game on three.js 0.160 with no npm dependencies. The sourc
 - Build models with a `Kit` (`src/render/kit.js`): one mesh per material. Only the axles are separate meshes, so the wheels can turn.
 - The room is dim on purpose: the lamp is a spot with a wide soft edge, ambient light is low, and diffuse surfaces in the room keep `envMapIntensity` near 0.05 so the reflection map doesn't flatten the lighting.
 - The lamp hides when the camera is above it, and the ceiling when the camera is above the ceiling, so the table can be seen from anywhere.
+- Driver view (`ride` in `ui/camera.js`): the camera sits at the model's `eye` (each builder passes one to `assemble`), with a 0.02" near clip. The car's own glass is hidden (`CarView.setCockpit`), any car within `CLEAR` of the lens is hidden for the frame, and switching in or out is a cut under a fade, never a glide (a glide would pass through the lamp and joists). If you move a model's eye or reshape a cockpit, re-run a near-clip check: walk every triangle near the lens and flag any the near plane cuts inside the view, for each car through a lap, a crash and a reset.
 
 ## Checking a change in a browser
 

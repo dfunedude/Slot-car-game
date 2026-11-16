@@ -12,13 +12,15 @@ import { fill, rect, poly, text, roundel, arches, flames, ellipse } from './pain
 const S = (x, w, y0, y1, o = {}) => ({ x, w, y0, y1, ...o });
 const half = key => (SPECS[key].wb - GUIDE) / 2;
 // put the kit's body and the two axles together: front at +a, rear at -a
-function assemble(k, a, front, rear) {
+// eye: where the driver's eye (and the driver camera) sits, [x, y] on the centreline, placed clear of
+// the helmet, roof and screen so nothing of the car's own comes within the camera's near clip
+function assemble(k, a, front, rear, eye) {
   const root = new THREE.Group();
   root.add(k.build());
   front.position.set(a, front.userData.r, 0);
   rear.position.set(-a, rear.userData.r, 0);
   root.add(front, rear);
-  return { root, axles: [front, rear] };
+  return { root, axles: [front, rear], eye: new THREE.Vector3(eye[0], eye[1], 0) };
 }
 const loftMirror = (k, mat, sections, zc) => { for (const s of [-1, 1]) k.put(mat, loft(sections.map(q => ({ ...q, zc: s * zc })))); };
 
@@ -63,7 +65,7 @@ function f1(L) {
   pair(k, M.chrome, UNIT.cylX, -1.15, 0.27, 0.16, 0.3, 0.03, 0.03, 0, 0, 0.15);
   lamps(k, M.tail, -1.25, 0.24, 0.08, 0.025, 0);
   chassis(k, a, { width: 0.5 });
-  return assemble(k, a, axle(0.19, 0.2, 0.5, { rim: 0.6 }), axle(0.25, 0.34, 0.52, { rim: 0.6 }));
+  return assemble(k, a, axle(0.19, 0.2, 0.5, { rim: 0.6 }), axle(0.25, 0.34, 0.52, { rim: 0.6 }), [0.17, 0.56]);
 }
 
 // ---------- Can-Am Spyder: open two-seat body, wheels under bulging fenders, stacks and a big wing ----------
@@ -103,7 +105,7 @@ function canam(L) {
   lamps(k, M.tail, -1.24, 0.28, 0.42, 0.04, 0);
   lamps(k, M.head, 1.18, 0.26, 0.42, 0.05, 1);
   chassis(k, a, { width: 0.6 });
-  return assemble(k, a, axle(0.2, 0.24, 0.45, { rim: 0.6 }), axle(0.23, 0.32, 0.46, { rim: 0.6 }));
+  return assemble(k, a, axle(0.2, 0.24, 0.45, { rim: 0.6 }), axle(0.23, 0.32, 0.46, { rim: 0.6 }), [0.15, 0.58]);
 }
 
 // ---------- Long-tail Coupe: a 1970 endurance prototype, bubble cockpit and a long finned tail ----------
@@ -138,7 +140,7 @@ function longtail(L) {
   for (let i = 0; i < 5; i++) k.box(M.black, 0.03, 0.02, 0.28, -0.72 - i * 0.07, 0.43, 0);
   lamps(k, M.tail, -1.63, 0.3, 0.3, 0.035, 0);
   chassis(k, a, { width: 0.6 });
-  return assemble(k, a, axle(0.21, 0.24, 0.46), axle(0.23, 0.3, 0.46));
+  return assemble(k, a, axle(0.21, 0.24, 0.46), axle(0.23, 0.3, 0.46), [0.08, 0.45]);
 }
 
 // ---------- Pony Coupe: a 1970 Trans-Am fastback, chrome bumpers, hood scoop, ducktail ----------
@@ -177,7 +179,7 @@ function pony(L) {
   pair(k, M.chrome, UNIT.cylX, -0.1, 0.11, 0.53, 0.7, 0.03, 0.03);
   pair(k, M.chrome, UNIT.box, 0.45, 0.47, 0.52, 0.05, 0.04, 0.06);
   chassis(k, a, { width: 0.7 });
-  return assemble(k, a, axle(0.21, 0.26, 0.45), axle(0.22, 0.3, 0.45));
+  return assemble(k, a, axle(0.21, 0.26, 0.45), axle(0.22, 0.3, 0.45), [0.1, 0.53]);
 }
 
 // ---------- Aero Stocker: a 1970 winged superspeedway car, nose cone and towering wing ----------
@@ -214,7 +216,7 @@ function aero(L) {
   // window net and a roll cage glimpse
   k.box(M.black, 0.2, 0.12, 0.005, -0.05, 0.52, 0.462);
   chassis(k, a, { width: 0.7 });
-  return assemble(k, a, axle(0.22, 0.26, 0.46), axle(0.22, 0.28, 0.46));
+  return assemble(k, a, axle(0.22, 0.26, 0.46), axle(0.22, 0.28, 0.46), [0.05, 0.56]);
 }
 
 // ---------- Street Van: a 1977 custom van, porthole windows, side pipes, murals ----------
@@ -256,7 +258,7 @@ function van(L) {
   pair(k, M.chrome, UNIT.cylX, 0.0, 0.11, 0.55, 0.85, 0.035, 0.035);
   pair(k, M.chrome, UNIT.box, 0.85, 0.72, 0.6, 0.04, 0.06, 0.06);
   chassis(k, a, { width: 0.7 });
-  return assemble(k, a, axle(0.22, 0.26, 0.46), axle(0.22, 0.3, 0.46));
+  return assemble(k, a, axle(0.22, 0.26, 0.46), axle(0.22, 0.3, 0.46), [0.7, 0.8]);
 }
 
 export const BUILDERS = { f1, canam, longtail, pony, aero, van };

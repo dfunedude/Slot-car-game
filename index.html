@@ -29,12 +29,16 @@
       <button id="btnFollow" class="icon-btn" aria-pressed="false" aria-label="Follow your car" title="Follow your car (F)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="13" height="10" rx="2"/><path d="M15.5 10.5l6-3.5v10l-6-3.5"/></svg>
       </button>
+      <button id="btnDriver" class="icon-btn" aria-pressed="false" aria-label="Driver view" title="Driver view (C)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2"/><path d="M3.8 10.5h6.3M13.9 10.5h6.3M12 14v6.4"/></svg>
+      </button>
       <button id="btnView" class="icon-btn" aria-label="Reset view" title="Table view (V)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
       </button>
       <button id="btnHelp" class="icon-btn" aria-label="How to play" title="How to play">?</button>
     </div>
     <div id="board" class="board" aria-live="off"></div>
+    <div id="fade" class="fade" aria-hidden="true"></div>
     <div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
     <div id="toast" role="status" aria-live="polite" hidden></div>
     <div id="help" class="help" hidden>
@@ -45,10 +49,10 @@
           <dt>Drive</dt><dd>Hold the trigger strip on your controller and slide along it to squeeze harder. Let go and the controller brakes. Keys: Space or ↑ for the first player, W for the second, P for the third and Z for the fourth.</dd>
           <dt>Corners</dt><dd>The corner meter shows how hard the tyres are working. In the yellow the tail steps out; hold it in the red and the guide pops out of the slot and the car flies off, maybe off the table.</dd>
           <dt>Reset</dt><dd>A car that has come off waits for you: tap it, press Reset on its controller, or press R, and it's set back in its slot. The computer's marshal looks after its own car.</dd>
-          <dt>Race</dt><dd>Give each lane a player, a computer driver (Rookie, Pro or Ace) or nobody. Pick practice or a race and press Start. Races wait for three red lights and go on the green. The lane swap and the crossing are where cars can meet; the computers give way to each other there.</dd>
+          <dt>Race</dt><dd>Give each lane a player, a computer driver (Rookie, Pro or Ace) or nobody. Pick a race length and press Start race (or Enter): the cars line up on the grid and the lights count down 3, 2, 1 to the green. Practice goes straight back to open running with timed laps. The lane swap and the crossing are where cars can meet; the computers give way to each other there.</dd>
           <dt>Track</dt><dd>Choose two-lane or four-lane pieces, then tap a piece to add it at the glowing open end, or tap any ring to build from that end. Drag pieces and their ends snap together. Two-lane and four-lane track don't join. Rotate, Delete, Undo and ready-made circuits are on the second row. Laps are counted on the start/finish piece, and it decides how many lanes race.</dd>
           <dt>Garage</dt><dd>Choose a lane, then a car and its paint. Each car has its own top speed, pickup and grip.</dd>
-          <dt>View</dt><dd>Drag to look around, pinch or scroll to zoom, two-finger drag or right-drag to pan. The camera button rides along behind your car.</dd>
+          <dt>View</dt><dd>Drag to look around, pinch or scroll to zoom, two-finger drag or right-drag to pan. The camera button rides along behind your car. The steering-wheel button puts you in the driver's seat; press it again to ride in the next car, and drag to turn your head.</dd>
         </dl>
         <div class="close-row"><button id="btnHelpClose" class="key">Close</button></div>
       </div>
@@ -66,8 +70,9 @@
     <section class="panel" data-panel="race" role="tabpanel" aria-labelledby="tab-race">
       <div class="controllers" id="controllers"></div>
       <div class="row scroller">
-        <select id="modeSel" class="key" aria-label="Session"></select>
-        <button id="btnStart" class="key go">Start</button>
+        <button id="btnPractice" class="key">Practice</button>
+        <select id="lapsSel" class="key" aria-label="Race length"></select>
+        <button id="btnStart" class="key go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h13l-2.5 4L18 12H5"/></svg>Start race</button>
         <span class="hint" id="raceHint"></span>
       </div>
     </section>

@@ -4,6 +4,7 @@ import { SPECS } from '../core/specs.js';
 import { GUIDE } from '../core/racer.js';
 import { scene } from '../render/stage.js';
 import { TEX } from '../render/textures.js';
+import { M } from '../render/materials.js';
 import { disposeModel } from '../render/kit.js';
 import { BUILDERS } from '../cars/models.js';
 import { LIVERIES } from '../cars/liveries.js';
@@ -31,7 +32,12 @@ export class CarView {
     this.root.add(this.spark);
     this.root.visible = false;
     scene.add(this.root);
-    this.key = null; this.li = 0;
+    this.key = null; this.li = 0; this.cockpit = false;
+  }
+  // with the driver camera in this car: its own glass is left out of the picture
+  setCockpit(on) {
+    this.cockpit = on;
+    for (const g of this.glass || []) g.visible = !on;
   }
   setModel(key, li) {
     if (!BUILDERS[key]) key = 'f1';
@@ -40,7 +46,11 @@ export class CarView {
     if (this.body) { this.root.remove(this.body); disposeModel(this.body); }
     const m = BUILDERS[key](LIVERIES[key][li]);
     m.root.traverse(o => { if (o.isMesh) o.userData.car = this; });
-    this.body = m.root; this.axles = m.axles;
+    this.body = m.root; this.axles = m.axles; this.eye = m.eye;
+    // its windows, which the driver camera leaves out so it can see through the screen
+    this.glass = [];
+    m.root.traverse(o => { if (o.isMesh && o.material === M.glass) this.glass.push(o); });
+    this.setCockpit(this.cockpit);
     this.root.add(this.body);
     this.key = key; this.li = li;
     this.racer.setSpec(SPECS[key]);

@@ -123,6 +123,8 @@ select.key.slim { padding-right: 26px; background-position: calc(100% - 14px) 50
   #deck.lanes-4 .key.reset span { display: none; }
 }
 @media (max-width: 520px) {
+  .panel[data-panel="race"] .row button.key { padding: 0 11px; }
+  #btnStart svg { display: none; }
   .key.reset span { display: none; }
   .hint { display: none; }
   .controllers { gap: 8px; }

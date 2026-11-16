@@ -7,7 +7,7 @@ import { layout, session, state, views } from './state.js';
 import { save, loadSaved, applySaved } from './storage.js';
 import { $, toast } from './ui/dom.js';
 import { updateSoundBtn, updateFastBtn, updateButtons, updateBoard, updateReadout, updateBanner, flashLane, showResult } from './ui/hud.js';
-import { view, resetView, stepCamera } from './ui/camera.js';
+import { view, resetView, stepCamera, ride, cycleRide } from './ui/camera.js';
 import { syncViews, loadPreset } from './ui/editor.js';
 import { updateControllers } from './ui/controllers.js';
 import { renderGarage, pickCar } from './ui/garage.js';
@@ -85,4 +85,4 @@ function boot() {
 }
 boot();
 // test handle for scripted checks; release builds drop this line (see tools/build.mjs)
-window.__bgp = { layout, session, state, views, view, camera, scene, renderer, setMode, startSession, syncViews, loadPreset, pickCar };
+window.__bgp = { layout, session, state, views, view, camera, scene, renderer, setMode, startSession, syncViews, loadPreset, pickCar, ride, cycleRide, stepCamera, updateRoom };

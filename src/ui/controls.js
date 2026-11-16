@@ -6,7 +6,7 @@ import { layout, sound, session, state } from '../state.js';
 import { save } from '../storage.js';
 import { $, toast } from './dom.js';
 import { updateSoundBtn, updateFastBtn, updateButtons, updateBoard, banner } from './hud.js';
-import { resetView, follow, setFollow } from './camera.js';
+import { resetView, follow, setFollow, cycleRide, leaveRide } from './camera.js';
 import { refreshMarkers, highlight, addPiece, rotateSel, deleteSel, undo, loadPreset, setGauge } from './editor.js';
 import { buildControllers, keyTrigger, resetWaiting, releaseAll, syncLanes, setLaneDriver } from './controllers.js';
 import { buildGarage, renderGarage } from './garage.js';
@@ -34,11 +34,12 @@ export function buildControls() {
   sel.add(new Option('Clear the table', 'clear'));
   sel.addEventListener('change', () => { const v = sel.value; sel.value = ''; if (v) loadPreset(v); sel.blur(); });
 
-  const mode = $('modeSel');
-  for (const [k, m] of Object.entries(MODES)) mode.add(new Option(m.name, k));
-  mode.value = state.raceMode;
-  mode.addEventListener('change', () => { state.raceMode = mode.value; mode.blur(); updateStartBtn(); });
-  $('btnStart').addEventListener('click', startSession);
+  const laps = $('lapsSel');
+  for (const [k, m] of Object.entries(MODES)) if (m.laps) laps.add(new Option(`${m.laps} laps`, k));
+  laps.value = state.raceLaps;
+  laps.addEventListener('change', () => { state.raceLaps = laps.value; laps.blur(); });
+  $('btnStart').addEventListener('click', () => startSession(state.raceLaps));
+  $('btnPractice').addEventListener('click', () => startSession('practice'));
 
   buildControllers();
   buildGarage();
@@ -48,7 +49,8 @@ export function buildControls() {
   $('btnUndo').addEventListener('click', undo);
   $('btnSound').addEventListener('click', () => { sound.init(); sound.setOn(!sound.on); updateSoundBtn(); save(); });
   $('btnFast').addEventListener('click', toggleFast);
-  $('btnView').addEventListener('click', () => { setFollow(false); resetView(true); });
+  $('btnView').addEventListener('click', () => { setFollow(false); leaveRide(); resetView(true); });
+  $('btnDriver').addEventListener('click', cycleRide);
   $('btnFollow').addEventListener('click', () => setFollow(!follow.on));
   $('btnHelp').addEventListener('click', () => { $('help').hidden = false; $('btnHelpClose').focus(); });
   $('btnHelpClose').addEventListener('click', () => { $('help').hidden = true; });
@@ -65,19 +67,18 @@ export function buildControls() {
     if (document.hidden) { releaseAll(); sound.pause(); save(); } else sound.resume();
   });
 }
-function updateStartBtn() {
-  $('btnStart').textContent = MODES[state.raceMode].laps ? 'Start race' : 'Practice';
-}
-// back to the grid for a new session of the mode chosen
-export function startSession() {
+// Every car back to the grid for a race of the length chosen (the lights count it down), or for
+// practice, which runs at once.
+export function startSession(mode = state.raceLaps) {
   sound.init();
   if (!layout.pieces.length) { toast('Lay some track first: the Track tab has ready-made circuits.'); return; }
   if (state.mode !== 'race') setMode('race');
   banner(null);
-  session.begin(state.raceMode);
+  session.begin(mode);
   updateBoard(0, true);
   if (!layout.startPiece()) toast('Add a start/finish piece to count laps.');
-  else if (!MODES[state.raceMode].laps) toast('Practice: laps are timed from the start line.');
+  else if (!MODES[mode].laps) toast('Practice: laps are timed from the start line.');
+  else if (!session.count()) toast('Give a lane a driver to race.');
 }
 function toggleFast() {
   setFastGraphics(!graphics.fast);
@@ -96,12 +97,13 @@ function onKey(e) {
   if (pk >= 0) { if (!e.repeat && state.mode === 'race') keyTrigger(pk, true); return; }
   if (e.repeat) return;
   if (k === 'f' || k === 'F') setFollow(!follow.on);
-  else if (k === 'v' || k === 'V') { setFollow(false); resetView(true); }
+  else if (k === 'v' || k === 'V') { setFollow(false); leaveRide(); resetView(true); }
+  else if (k === 'c' || k === 'C') cycleRide();
   else if (k === 'g' || k === 'G') toggleFast();
   else if ((k === 'r' || k === 'R') && state.mode === 'race') { if (!resetWaiting()) toast('No car is waiting to be put back.'); }
   else if ((k === 'r' || k === 'R') && state.mode === 'track') rotateSel();
   else if ((k === 'Delete' || k === 'Backspace') && state.mode === 'track') { e.preventDefault(); deleteSel(); }
-  else if (k === 'Enter' && state.mode === 'race' && e.target === document.body) startSession();
+  else if (k === 'Enter' && state.mode === 'race' && e.target === document.body) startSession(state.raceLaps);
   else if (k === '1') setMode('race'); else if (k === '2') setMode('track'); else if (k === '3') setMode('garage');
   else if (k === 'Escape') { $('help').hidden = true; state.sel = null; highlight(); updateButtons(); }
 }
@@ -127,9 +129,9 @@ export function setMode(m) {
     const n = layout.laneCount();
     if (n > lanesBefore && session.drivers.slice(2, n).every(d => d === 'off')) { setLaneDriver(2, 'pro'); setLaneDriver(3, 'rookie'); }
     lanesBefore = n;
-    session.begin('practice'); state.raceMode = 'practice'; $('modeSel').value = 'practice'; updateStartBtn();
+    session.begin('practice');
     syncLanes(); renderGarage();
     if (layout.freeEnds().length) toast('The track has open ends: cars that reach one fly off.');
   }
-  refreshMarkers(); highlight(); updateButtons(); updateStartBtn();
+  refreshMarkers(); highlight(); updateButtons();
 }

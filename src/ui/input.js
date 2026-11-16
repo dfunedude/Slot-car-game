@@ -4,7 +4,7 @@ import { TABLE_W, TABLE_D, TRACK_TOP, clamp } from '../core/geometry.js';
 import { canvas, scene, camera } from '../render/stage.js';
 import { views, sound, session, state } from '../state.js';
 import { updateButtons } from './hud.js';
-import { view, placeCamera, stopTween, follow } from './camera.js';
+import { view, placeCamera, stopTween, follow, ride, lookAround, zoomRide } from './camera.js';
 import { markers } from '../world/track.js';
 import { refreshMarkers, highlight, beginDrag, dragMove, endDrag, setGauge } from './editor.js';
 import { resetCar } from './controllers.js';
@@ -64,6 +64,7 @@ function onMove(e) {
     if (ptrs.size < 2) return;
     const [a, b] = [...ptrs.values()];
     const d = Math.max(10, Math.hypot(a.x - b.x, a.y - b.y));
+    if (ride.active) { zoomRide(gest.last ? gest.last / d : 1); gest.last = d; return; }
     if (follow.active) { follow.dist = clamp(gest.dist0 * gest.d0 / d, 5, 60); return; }
     view.dist = clamp(gest.dist0 * gest.d0 / d, 10, 260);
     const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
@@ -79,7 +80,8 @@ function onMove(e) {
     else gest.kind = !follow.active && (gest.button === 2 || gest.button === 1 || gest.mod) ? 'pan' : 'orbit';
   }
   const dx = e.clientX - gest.lx, dy = e.clientY - gest.ly;
-  if (gest.kind === 'orbit' && follow.active) {
+  if (gest.kind !== 'drag' && ride.active) { ride.held = true; lookAround(dx, dy); }
+  else if (gest.kind === 'orbit' && follow.active) {
     follow.yaw -= dx * 0.0055;
     follow.pitch = clamp(follow.pitch + dy * 0.0045, 0.08, 1.4);
   } else if (gest.kind === 'orbit') {
@@ -92,6 +94,7 @@ function onMove(e) {
 function onUp(e) {
   if (!ptrs.has(e.pointerId)) return;
   ptrs.delete(e.pointerId);
+  if (!ptrs.size) ride.held = false;
   if (!gest) return;
   if (gest.kind === 'pinch') {
     if (ptrs.size === 1) { const p = [...ptrs.values()][0]; gest = { kind: 'orbit', lx: p.x, ly: p.y }; } else gest = null;
@@ -128,7 +131,8 @@ export function bindCanvas() {
   canvas.addEventListener('wheel', e => {
     e.preventDefault(); stopTween();
     const k = Math.exp(e.deltaY * (e.ctrlKey ? 0.01 : 0.0012));
-    if (follow.active) follow.dist = clamp(follow.dist * k, 5, 60);
+    if (ride.active) zoomRide(k);
+    else if (follow.active) follow.dist = clamp(follow.dist * k, 5, 60);
     else view.dist = clamp(view.dist * k, 10, 260);
   }, { passive: false });
 }
